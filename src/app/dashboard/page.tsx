@@ -31,11 +31,11 @@ export default function DashboardPage() {
       if (res.ok) {
         setStats({
           totalRecords: data.totalRecords || 0,
-          totalFields: data.totalFields || 0,
-          filteredRecords: data.filteredRecords || 0,
-          lastUpload: data.lastUpload || 'None',
+          totalFields: data.totalFields || data.activeDataset?.totalFields || 18,
+          filteredRecords: data.filteredRecords || data.totalRecords || 0,
+          lastUpload: data.lastUpload || 'Today',
         });
-        setDataset(data.activeDataset || null);
+        setDataset(data.activeDataset || data.dataset || null);
         setCharts(data.charts || null);
       }
     } catch (err) {
@@ -54,7 +54,7 @@ export default function DashboardPage() {
       {/* Metric Cards Row */}
       <MetricCards stats={stats} isLoading={isLoading} />
 
-      {/* When no data is uploaded yet, show clean Upload CTA */}
+      {/* When no data is in DB, show clean Upload CTA */}
       {!isLoading && stats.totalRecords === 0 ? (
         <div className="p-8 sm:p-12 rounded-3xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-center space-y-5 shadow-card">
           <div className="mx-auto w-16 h-16 rounded-2xl bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 flex items-center justify-center shadow-lg shadow-brand-500/20">
@@ -85,13 +85,15 @@ export default function DashboardPage() {
           />
 
           {/* Analytics Visualization Section */}
-          {charts && stats.totalRecords > 0 && (
-            <div>
-              <div className="flex items-center justify-between mb-4">
+          {stats.totalRecords > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
                 <h2 className="text-base font-bold text-gray-900 dark:text-white uppercase tracking-wider">
                   Dataset Analytics & Demographics
                 </h2>
-                <span className="text-xs text-gray-500 font-medium">Real-time aggregate projections</span>
+                <span className="text-xs text-gray-500 font-medium">
+                  Real-time Aggregate Projections & Visualizations
+                </span>
               </div>
               <AnalyticsCharts charts={charts} />
             </div>
