@@ -4,6 +4,8 @@ import RecordModel from '@/lib/models/Record';
 import DatasetModel from '@/lib/models/Dataset';
 import ActivityLogModel from '@/lib/models/ActivityLog';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();

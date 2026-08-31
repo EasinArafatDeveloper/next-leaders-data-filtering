@@ -4,6 +4,8 @@ import RecordModel from '@/lib/models/Record';
 import DatasetModel from '@/lib/models/Dataset';
 import ActivityLogModel from '@/lib/models/ActivityLog';
 
+export const dynamic = 'force-dynamic';
+
 const FIRST_NAMES = [
   'Muhammad', 'Easin', 'Arafat', 'Sajid', 'Tanvir', 'Fatima', 'Nusrat', 'Tasmia', 'Rahim', 'Karim',
   'Arif', 'Zayan', 'Mahmud', 'Sumaiya', 'Anika', 'Hasan', 'Mehedi', 'Farhana', 'Tahmid', 'Sabrina',

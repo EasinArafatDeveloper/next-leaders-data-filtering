@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import RecordModel from '@/lib/models/Record';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   return handleMigration();
 }

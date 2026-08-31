@@ -3,6 +3,8 @@ import connectToDatabase from '@/lib/db';
 import SavedFilterModel from '@/lib/models/SavedFilter';
 import ActivityLogModel from '@/lib/models/ActivityLog';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     await connectToDatabase();
@@ -23,16 +25,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Name and filters required' }, { status: 400 });
     }
 
-    const newFilter = await SavedFilterModel.create({ name, filters });
+    const savedFilter = await SavedFilterModel.create({
+      name,
+      filters,
+      createdAt: new Date(),
+    });
 
     await ActivityLogModel.create({
-      action: 'Filter Saved',
-      description: `Saved preset filter combination: "${name}"`,
+      action: 'Saved Filter Created',
+      description: `Saved filter preset "${name}"`,
       user: 'Easin Arafat',
       type: 'filter',
     });
 
-    return NextResponse.json(newFilter, { status: 201 });
+    return NextResponse.json(savedFilter, { status: 201 });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

@@ -3,6 +3,8 @@ import connectToDatabase from '@/lib/db';
 import RecordModel from '@/lib/models/Record';
 import DatasetModel from '@/lib/models/Dataset';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     await connectToDatabase();
@@ -44,32 +46,38 @@ export async function GET() {
     const ageRangeLabels: Record<string, string> = {
       '18': '18–25',
       '26': '26–35',
-      '36': '36–49',
-      '50': '50–64',
+      '36': '36–50',
+      '50': '50–65',
+      '65+': '65+',
     };
 
-    const ageFormatted = ageAggregation.map((b) => ({
-      range: ageRangeLabels[String(b._id)] || '65+',
-      count: b.count,
+    const formattedAgeData = ageAggregation.map((item) => ({
+      range: ageRangeLabels[String(item._id)] || String(item._id),
+      count: item.count,
     }));
 
     return NextResponse.json({
       totalRecords,
-      totalFields: activeDataset ? activeDataset.totalFields : 0,
-      filteredRecords: totalRecords,
-      lastUpload: activeDataset
-        ? new Date(activeDataset.uploadedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        : 'Never',
-      activeDataset: activeDataset || null,
-      charts: {
-        gender: genderAggregation.map((g) => ({ name: g._id || 'Other', value: g.count })),
-        status: statusAggregation.map((s) => ({ name: s._id || 'Active', value: s.count })),
-        locations: locationAggregation.map((l) => ({ name: l._id || 'Unknown', value: l.count })),
-        ageRanges: ageFormatted,
-      },
+      dataset: activeDataset || null,
+      genderDistribution: genderAggregation.map((g) => ({
+        name: g._id || 'Unknown',
+        value: g.count,
+      })),
+      statusDistribution: statusAggregation.map((s) => ({
+        name: s._id || 'Unknown',
+        value: s.count,
+      })),
+      topLocations: locationAggregation.map((l) => ({
+        location: l._id || 'Unspecified',
+        count: l.count,
+      })),
+      ageDemographics: formattedAgeData,
     });
   } catch (error: any) {
-    console.error('Stats API error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Stats error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch dataset statistics', message: error.message },
+      { status: 500 }
+    );
   }
 }

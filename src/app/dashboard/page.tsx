@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import React, { useEffect, useState, useCallback } from 'react';
 import { MetricCards } from '@/components/dashboard/MetricCards';
 import { DatasetSummaryCard } from '@/components/dashboard/DatasetSummaryCard';

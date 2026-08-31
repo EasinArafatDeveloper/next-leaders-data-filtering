@@ -5,6 +5,8 @@ import DownloadHistoryModel from '@/lib/models/DownloadHistory';
 import ActivityLogModel from '@/lib/models/ActivityLog';
 import Papa from 'papaparse';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
