@@ -1,0 +1,204 @@
+import { NextRequest, NextResponse } from 'next/server';
+import connectToDatabase from '@/lib/db';
+import RecordModel from '@/lib/models/Record';
+import DatasetModel from '@/lib/models/Dataset';
+import ActivityLogModel from '@/lib/models/ActivityLog';
+import DownloadHistoryModel from '@/lib/models/DownloadHistory';
+
+export async function GET(request: NextRequest) {
+  try {
+    await connectToDatabase();
+
+    const { searchParams } = new URL(request.url);
+
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const limit = parseInt(searchParams.get('limit') || '25', 10);
+    const search = searchParams.get('search') || '';
+    const gender = searchParams.get('gender') || '';
+    const minAge = searchParams.get('minAge');
+    const maxAge = searchParams.get('maxAge');
+    const avatarType = searchParams.get('avatarType') || '';
+    const numberStartsWith = searchParams.get('numberStartsWith') || '';
+    const maxActiveDays = searchParams.get('maxActiveDays');
+    const lastOnlineFrom = searchParams.get('lastOnlineFrom') || '';
+    const lastOnlineTo = searchParams.get('lastOnlineTo') || '';
+
+    // Search target fields
+    const nameWise = searchParams.get('nameWise') === 'true';
+    const numberWise = searchParams.get('numberWise') === 'true';
+    const genderWise = searchParams.get('genderWise') === 'true';
+    const ageWise = searchParams.get('ageWise') === 'true';
+    const lastOnlineWise = searchParams.get('lastOnlineWise') === 'true';
+    const avatarTypeWise = searchParams.get('avatarTypeWise') === 'true';
+
+    const sortBy = searchParams.get('sortBy') || 'createdAt';
+    const sortOrder = searchParams.get('sortOrder') === 'asc' ? 1 : -1;
+
+    // Build dynamic query
+    const query: any = {};
+
+    // 1. SMART OMNISEARCH
+    if (search.trim()) {
+      const rawSearch = search.trim();
+      const cleanPhoneSearch = rawSearch.replace(/[\s\+\-\(\)]/g, '');
+      const escaped = rawSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const searchRegex = new RegExp(escaped, 'i');
+
+      const isTargeted =
+        (nameWise && (numberWise || genderWise || ageWise || lastOnlineWise || avatarTypeWise)) ||
+        numberWise ||
+        genderWise ||
+        ageWise ||
+        lastOnlineWise ||
+        avatarTypeWise;
+
+      if (isTargeted) {
+        const targetedConditions: any[] = [];
+        if (nameWise) {
+          targetedConditions.push({ name: searchRegex });
+          targetedConditions.push({ 'customFields.nickname': searchRegex });
+        }
+        if (numberWise) {
+          targetedConditions.push({ phone: new RegExp(cleanPhoneSearch || escaped, 'i') });
+        }
+        if (genderWise) {
+          targetedConditions.push({ gender: searchRegex });
+        }
+        if (ageWise) {
+          const numVal = parseInt(rawSearch, 10);
+          if (!isNaN(numVal)) targetedConditions.push({ age: numVal });
+        }
+        if (avatarTypeWise) {
+          targetedConditions.push({ avatarType: searchRegex });
+        }
+        if (targetedConditions.length > 0) {
+          query.$or = targetedConditions;
+        }
+      } else {
+        // Universal Smart Omnisearch: Searches across Name, Phone, Email, Location, Nickname simultaneously
+        const orConditions: any[] = [
+          { name: searchRegex },
+          { phone: searchRegex },
+          { email: searchRegex },
+          { location: searchRegex },
+          { area: searchRegex },
+          { 'customFields.nickname': searchRegex },
+        ];
+
+        if (cleanPhoneSearch && /\d/.test(cleanPhoneSearch)) {
+          orConditions.push({ phone: new RegExp(cleanPhoneSearch, 'i') });
+        }
+
+        query.$or = orConditions;
+      }
+    }
+
+    // 2. Gender filter
+    if (gender && gender !== 'All') {
+      query.gender = gender;
+    }
+
+    // 3. Avatar Type filter
+    if (avatarType && avatarType !== 'All') {
+      query.avatarType = avatarType;
+    }
+
+    // 4. Age range filter
+    if (minAge || maxAge) {
+      query.age = {};
+      if (minAge) query.age.$gte = parseInt(minAge, 10);
+      if (maxAge) query.age.$lte = parseInt(maxAge, 10);
+    }
+
+    // 5. Number starts with (e.g. 88017)
+    if (numberStartsWith.trim()) {
+      const prefixClean = numberStartsWith.trim().replace(/[+]/g, '');
+      query.phone = { $regex: `^(\\+)?${prefixClean}` };
+    }
+
+    // 6. Active days <=
+    if (maxActiveDays && !isNaN(parseInt(maxActiveDays, 10))) {
+      query.activeDays = { $lte: parseInt(maxActiveDays, 10) };
+    }
+
+    // 7. Last online date range
+    if (lastOnlineFrom || lastOnlineTo) {
+      query.lastActive = {};
+      if (lastOnlineFrom) {
+        const fromDate = new Date(lastOnlineFrom);
+        fromDate.setHours(0, 0, 0, 0);
+        query.lastActive.$gte = fromDate;
+      }
+      if (lastOnlineTo) {
+        const toDate = new Date(lastOnlineTo);
+        toDate.setHours(23, 59, 59, 999);
+        query.lastActive.$lte = toDate;
+      }
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [records, totalMatching, totalDatasetRecords, activeCount, inactiveCount, pendingCount] =
+      await Promise.all([
+        RecordModel.find(query)
+          .sort({ [sortBy]: sortOrder })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        RecordModel.countDocuments(query),
+        RecordModel.countDocuments({}),
+        RecordModel.countDocuments({ ...query, status: 'Active' }),
+        RecordModel.countDocuments({ ...query, status: 'Inactive' }),
+        RecordModel.countDocuments({ ...query, status: 'Pending' }),
+      ]);
+
+    // Average age calculation for matching records
+    const ageAggregation = await RecordModel.aggregate([
+      { $match: query },
+      { $group: { _id: null, avgAge: { $avg: '$age' } } },
+    ]);
+    const avgAge = ageAggregation.length > 0 ? Math.round(ageAggregation[0].avgAge || 0) : 0;
+
+    return NextResponse.json({
+      data: records,
+      pagination: {
+        page,
+        limit,
+        total: totalMatching,
+        totalPages: Math.ceil(totalMatching / limit) || 1,
+      },
+      summaryStats: {
+        totalRecords: totalDatasetRecords,
+        filteredRecords: totalMatching,
+        activeCount,
+        inactiveCount,
+        pendingCount,
+        avgAge,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error fetching records:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch data records', message: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE() {
+  try {
+    await connectToDatabase();
+
+    await RecordModel.deleteMany({});
+    await DatasetModel.deleteMany({});
+    await ActivityLogModel.deleteMany({});
+    await DownloadHistoryModel.deleteMany({});
+
+    return NextResponse.json({
+      success: true,
+      message: 'All datasets, activity, and history cleared successfully. App is 100% fresh.',
+    });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
