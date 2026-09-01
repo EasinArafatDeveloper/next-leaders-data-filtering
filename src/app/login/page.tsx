@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Lock,
@@ -18,7 +18,7 @@ import { useAuth } from '@/components/auth/AuthContext';
 import { useTheme } from '@/components/theme/ThemeProvider';
 import { toast } from 'sonner';
 
-export default function LoginPage() {
+function LoginFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
@@ -145,7 +145,7 @@ export default function LoginPage() {
               >
                 <span>Username or Email ID</span>
               </label>
-              <div className="relative group">
+              <div className="group relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400 group-focus-within:text-brand-600 dark:group-focus-within:text-brand-400 transition-colors">
                   <User className="w-4 h-4" />
                 </div>
@@ -170,7 +170,7 @@ export default function LoginPage() {
               >
                 <span>Password</span>
               </label>
-              <div className="relative group">
+              <div className="group relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400 group-focus-within:text-brand-600 dark:group-focus-within:text-brand-400 transition-colors">
                   <Lock className="w-4 h-4" />
                 </div>
@@ -242,5 +242,19 @@ export default function LoginPage() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] dark:bg-[#080C14]">
+          <div className="w-8 h-8 border-3 border-brand-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <LoginFormContent />
+    </Suspense>
   );
 }
