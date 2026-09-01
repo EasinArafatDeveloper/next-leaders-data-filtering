@@ -15,8 +15,10 @@ import {
   Users,
   Clock,
   RefreshCw,
+  FileSpreadsheet,
+  FolderOpen,
 } from 'lucide-react';
-import { FilterQueryState } from '@/types';
+import { FilterQueryState, IDatasetSummary } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface FilterToolbarProps {
@@ -59,6 +61,15 @@ export function FilterToolbar({
 }: FilterToolbarProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [searchQuery, setSearchQuery] = useState(filters.search || '');
+  const [datasets, setDatasets] = useState<IDatasetSummary[]>([]);
+
+  // Fetch available datasets for file-level filtering
+  useEffect(() => {
+    fetch('/api/data/datasets', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => setDatasets(data || []))
+      .catch((err) => console.error('Failed to load datasets for filter:', err));
+  }, []);
 
   // Sync search input with prop
   useEffect(() => {
@@ -77,6 +88,7 @@ export function FilterToolbar({
   // Count active filters
   const activeFilterCount = [
     filters.search,
+    filters.datasetId && filters.datasetId !== 'All',
     filters.gender && filters.gender !== 'All',
     filters.avatarType && filters.avatarType !== 'All',
     filters.minAge || filters.maxAge,
@@ -97,7 +109,7 @@ export function FilterToolbar({
       {/* --- SMART OMNIBAR ROW --- */}
       <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200/90 dark:border-slate-800 shadow-sm space-y-3">
         {/* Main Search & Control Bar */}
-        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
           {/* Smart Omnisearch Input */}
           <div className="relative flex-1">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
@@ -122,6 +134,34 @@ export function FilterToolbar({
                 <X className="w-4 h-4" />
               </button>
             )}
+          </div>
+
+          {/* Uploaded File / Dataset Dropdown Selector */}
+          <div className="relative min-w-[210px] sm:w-64 shrink-0">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-brand-600 dark:text-brand-400">
+              <FileSpreadsheet className="w-4 h-4" />
+            </div>
+            <select
+              value={filters.datasetId || 'All'}
+              onChange={(e) => {
+                const selectedId = e.target.value;
+                const found = datasets.find((d) => d._id === selectedId);
+                onApplyFilters({
+                  datasetId: selectedId,
+                  filename: found ? found.filename : '',
+                  page: 1,
+                });
+              }}
+              className="w-full pl-9 pr-8 py-2.5 bg-gray-50/90 dark:bg-slate-800/90 border border-gray-200/80 dark:border-slate-700/80 rounded-xl text-xs font-bold text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer transition-all truncate shadow-inner"
+              title="Filter by specific uploaded file"
+            >
+              <option value="All">📁 All Uploaded Files (Combined)</option>
+              {datasets.map((d) => (
+                <option key={d._id} value={d._id}>
+                  📄 {d.filename} ({(d.totalRecords || 0).toLocaleString()} rows)
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Action Buttons */}
@@ -376,6 +416,46 @@ export function FilterToolbar({
                   >
                     Reset All Fields
                   </button>
+                </div>
+              </div>
+
+              {/* Dataset / Uploaded File Scope Banner */}
+              <div className="p-3.5 rounded-xl bg-brand-50/70 dark:bg-brand-950/40 border border-brand-200/80 dark:border-brand-900/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-lg bg-brand-100 dark:bg-brand-900/60 text-brand-700 dark:text-brand-300">
+                    <FileSpreadsheet className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h5 className="font-bold text-gray-900 dark:text-white text-xs">
+                      Dataset / Uploaded File Scope
+                    </h5>
+                    <p className="text-[11px] text-gray-500">
+                      Choose a specific uploaded file to isolate and filter only its records
+                    </p>
+                  </div>
+                </div>
+
+                <div className="w-full sm:w-72 shrink-0">
+                  <select
+                    value={filters.datasetId || 'All'}
+                    onChange={(e) => {
+                      const selectedId = e.target.value;
+                      const found = datasets.find((d) => d._id === selectedId);
+                      onApplyFilters({
+                        datasetId: selectedId,
+                        filename: found ? found.filename : '',
+                        page: 1,
+                      });
+                    }}
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-brand-300 dark:border-brand-800 rounded-xl text-xs font-bold text-brand-700 dark:text-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm cursor-pointer truncate"
+                  >
+                    <option value="All">📁 All Uploaded Files (Combined)</option>
+                    {datasets.map((d) => (
+                      <option key={d._id} value={d._id}>
+                        📄 {d.filename} ({(d.totalRecords || 0).toLocaleString()} rows)
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

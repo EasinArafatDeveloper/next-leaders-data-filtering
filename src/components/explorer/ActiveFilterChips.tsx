@@ -17,6 +17,13 @@ export function ActiveFilterChips({ filters, onRemoveFilter, onClearAll }: Activ
     activeChips.push({ key: 'search', label: `Search: "${filters.search}"` });
   }
 
+  if (filters.datasetId && filters.datasetId !== 'All') {
+    activeChips.push({
+      key: 'datasetId',
+      label: `📁 File: ${filters.filename || 'Selected File'}`,
+    });
+  }
+
   if (filters.gender && filters.gender !== 'All') {
     activeChips.push({ key: 'gender', label: `Gender: ${filters.gender}` });
   }

@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '25', 10);
     const search = searchParams.get('search') || '';
+    const datasetId = searchParams.get('datasetId') || '';
     const gender = searchParams.get('gender') || '';
     const minAge = searchParams.get('minAge');
     const maxAge = searchParams.get('maxAge');
@@ -93,6 +94,11 @@ export async function GET(request: NextRequest) {
 
         query.$or = orConditions;
       }
+    }
+
+    // 1.5. Dataset / Uploaded File filter
+    if (datasetId && datasetId !== 'All') {
+      query.datasetId = datasetId;
     }
 
     // 2. Gender filter

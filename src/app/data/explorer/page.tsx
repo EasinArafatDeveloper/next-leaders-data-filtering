@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const DEFAULT_FILTERS: FilterQueryState = {
   search: '',
+  datasetId: 'All',
   gender: 'All',
   minAge: '',
   maxAge: '',
@@ -62,6 +63,7 @@ export default function DataExplorerPage() {
     try {
       const params = new URLSearchParams();
       if (currentFilters.search) params.set('search', currentFilters.search);
+      if (currentFilters.datasetId && currentFilters.datasetId !== 'All') params.set('datasetId', currentFilters.datasetId);
       if (currentFilters.gender && currentFilters.gender !== 'All') params.set('gender', currentFilters.gender);
       if (currentFilters.minAge) params.set('minAge', String(currentFilters.minAge));
       if (currentFilters.maxAge) params.set('maxAge', String(currentFilters.maxAge));
@@ -104,6 +106,7 @@ export default function DataExplorerPage() {
     fetchData(filters);
   }, [
     filters.search,
+    filters.datasetId,
     filters.gender,
     filters.minAge,
     filters.maxAge,
@@ -138,6 +141,7 @@ export default function DataExplorerPage() {
     setFilters((prev) => {
       const resetValues: Partial<FilterQueryState> = {
         search: key === 'search' ? '' : prev.search,
+        datasetId: key === 'datasetId' ? 'All' : prev.datasetId,
         gender: key === 'gender' ? 'All' : prev.gender,
         minAge: key === 'minAge' ? '' : prev.minAge,
         maxAge: key === 'maxAge' ? '' : prev.maxAge,
@@ -167,6 +171,7 @@ export default function DataExplorerPage() {
     try {
       const payload = {
         search: filters.search,
+        datasetId: filters.datasetId !== 'All' ? filters.datasetId : undefined,
         gender: filters.gender !== 'All' ? filters.gender : undefined,
         minAge: filters.minAge,
         maxAge: filters.maxAge,

@@ -81,6 +81,8 @@ export interface IActivityLog {
 
 export interface FilterQueryState {
   search?: string;
+  datasetId?: string;
+  filename?: string;
   gender?: string;
   minAge?: number | string;
   maxAge?: number | string;

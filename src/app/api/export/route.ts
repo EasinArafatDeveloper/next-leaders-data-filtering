@@ -14,6 +14,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       search,
+      datasetId,
       gender,
       minAge,
       maxAge,
@@ -83,6 +84,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (datasetId && datasetId !== 'All') query.datasetId = datasetId;
     if (gender && gender !== 'All') query.gender = gender;
     if (avatarType && avatarType !== 'All') query.avatarType = avatarType;
 
