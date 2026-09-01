@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { DropZone } from '@/components/upload/DropZone';
 import { UploadProgress } from '@/components/upload/UploadProgress';
 import { UploadSummaryModal } from '@/components/upload/UploadSummaryModal';
+import { UploadHistory } from '@/components/upload/UploadHistory';
 import { toast } from 'sonner';
 import { FileText, AlertCircle, RefreshCw } from 'lucide-react';
 
@@ -13,6 +14,7 @@ export default function UploadDataPage() {
   const [uploadStage, setUploadStage] = useState<UploadStage>('idle');
   const [currentStep, setCurrentStep] = useState(0);
   const [errorMessage, setErrorMessage] = useState('');
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   const [uploadResult, setUploadResult] = useState<{
     newCount: number;
     updatedCount: number;
@@ -57,6 +59,7 @@ export default function UploadDataPage() {
           filename,
         });
         setUploadStage('done');
+        setHistoryRefreshKey((prev) => prev + 1);
         const summaryMsg = data.updatedCount > 0
           ? `Added ${data.newCount} new, merged ${data.updatedCount} existing records!`
           : `Successfully added ${data.newCount} records!`;
@@ -76,6 +79,7 @@ export default function UploadDataPage() {
     setCurrentStep(0);
     setUploadResult(null);
     setErrorMessage('');
+    setHistoryRefreshKey((prev) => prev + 1);
   };
 
   return (
@@ -137,6 +141,11 @@ export default function UploadDataPage() {
                 <span className="text-gray-500 text-[11px]">location, last online, active days</span>
               </div>
             </div>
+          </div>
+
+          {/* Upload History & Managed Files Section */}
+          <div className="pt-4 border-t border-gray-200/80 dark:border-slate-800">
+            <UploadHistory refreshKey={historyRefreshKey} />
           </div>
         </>
       )}

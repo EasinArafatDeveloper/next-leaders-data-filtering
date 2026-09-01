@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -31,6 +33,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       return next;
     });
   };
+
+  // If on login page, render full screen without dashboard shell
+  if (pathname === '/login') {
+    return <>{children}</>;
+  }
 
   return (
     <div className="min-h-screen flex flex-col">

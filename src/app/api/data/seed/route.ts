@@ -92,22 +92,32 @@ export async function POST() {
       });
     }
 
+    // Create Dataset entry first
+    const newDataset = await DatasetModel.create({
+      filename: 'people-data-enterprise.xlsx',
+      totalRecords,
+      newRecordsCount: totalRecords,
+      updatedRecordsCount: 0,
+      totalFields: 18,
+      fileSize: '1.4 MB',
+      status: 'Ready',
+      uploadedBy: 'Administrator',
+      uploadedAt: new Date(),
+    });
+
+    const datasetId = newDataset._id.toString();
+
+    // Assign datasetId to all seeded records
+    for (const r of recordsToInsert) {
+      (r as any).datasetId = datasetId;
+    }
+
     // Insert in batches of 500
     const chunkSize = 500;
     for (let i = 0; i < recordsToInsert.length; i += chunkSize) {
       const chunk = recordsToInsert.slice(i, i + chunkSize);
       await RecordModel.insertMany(chunk);
     }
-
-    // Create Dataset entry
-    const newDataset = await DatasetModel.create({
-      filename: 'people-data-enterprise.xlsx',
-      totalRecords,
-      totalFields: 18,
-      fileSize: '1.4 MB',
-      status: 'Ready',
-      uploadedAt: new Date(),
-    });
 
     // Log Activity
     await ActivityLogModel.create({

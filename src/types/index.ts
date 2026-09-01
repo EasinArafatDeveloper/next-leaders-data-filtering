@@ -23,9 +23,12 @@ export interface IDatasetSummary {
   _id?: string;
   filename: string;
   totalRecords: number;
+  newRecordsCount?: number;
+  updatedRecordsCount?: number;
   totalFields: number;
   fileSize: string;
   status: 'Ready' | 'Processing' | 'Failed';
+  uploadedBy?: string;
   uploadedAt: string | Date;
 }
 
@@ -45,12 +48,34 @@ export interface IDownloadHistory {
   status: 'Ready' | 'Expired';
 }
 
+export interface IUser {
+  _id?: string;
+  username: string;
+  password?: string;
+  name: string;
+  email?: string;
+  role: 'admin' | 'manager' | 'viewer';
+  failedLoginAttempts?: number;
+  lockUntil?: Date | null;
+  lastLoginAt?: string | Date;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+}
+
+export interface UserSession {
+  id: string;
+  username: string;
+  name: string;
+  email?: string;
+  role: 'admin' | 'manager' | 'viewer';
+}
+
 export interface IActivityLog {
   _id?: string;
   action: string;
   description: string;
   user: string;
-  type: 'upload' | 'export' | 'filter' | 'system';
+  type: 'upload' | 'export' | 'filter' | 'system' | 'auth';
   createdAt: string | Date;
 }
 

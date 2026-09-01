@@ -3,6 +3,7 @@ import connectToDatabase from '@/lib/db';
 import RecordModel from '@/lib/models/Record';
 import DatasetModel from '@/lib/models/Dataset';
 import ActivityLogModel from '@/lib/models/ActivityLog';
+import { getSessionUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -228,6 +229,25 @@ export async function POST(request: NextRequest) {
     // Track processed IDs in this batch to prevent duplicate updates within the same file
     const matchedDocIds = new Set<string>();
 
+    // Create Dataset record first so we have the datasetId
+    const totalFieldsCount = Object.keys(rows[0] || {}).length || 18;
+    const session = await getSessionUser();
+    const uploaderName = session?.name || 'Administrator';
+
+    const dataset = await DatasetModel.create({
+      filename: filename || 'uploaded-dataset.csv',
+      totalRecords: validRecords.length,
+      newRecordsCount: 0,
+      updatedRecordsCount: 0,
+      totalFields: totalFieldsCount,
+      fileSize: fileSize || `${(JSON.stringify(rows).length / 1024).toFixed(1)} KB`,
+      status: 'Ready',
+      uploadedBy: uploaderName,
+      uploadedAt: new Date(),
+    });
+
+    const datasetId = dataset._id.toString();
+
     for (const incoming of validRecords) {
       // Find matching existing record: first by phone, then by email
       const matched = (incoming.phone ? phoneMap.get(incoming.phone) : null) ||
@@ -312,7 +332,8 @@ export async function POST(request: NextRequest) {
           unchangedCount++;
         }
       } else {
-        // Brand new record
+        // Brand new record - tag with datasetId
+        incoming.datasetId = datasetId;
         newRecordsToInsert.push(incoming);
         newCount++;
       }
@@ -332,24 +353,19 @@ export async function POST(request: NextRequest) {
       await RecordModel.bulkWrite(bulkUpdateOps);
     }
 
-    const totalRecordsInDb = await RecordModel.countDocuments({});
-    const totalFieldsCount = Object.keys(rows[0] || {}).length || 18;
+    // Update dataset record counts
+    dataset.newRecordsCount = newCount;
+    dataset.updatedRecordsCount = updatedCount;
+    dataset.totalRecords = validRecords.length;
+    await dataset.save();
 
-    // Update Dataset stats
-    const dataset = await DatasetModel.create({
-      filename: filename || 'merged-dataset.csv',
-      totalRecords: totalRecordsInDb,
-      totalFields: totalFieldsCount,
-      fileSize: fileSize || `${(JSON.stringify(rows).length / 1024).toFixed(1)} KB`,
-      status: 'Ready',
-      uploadedAt: new Date(),
-    });
+    const totalRecordsInDb = await RecordModel.countDocuments({});
 
     // Log Activity
     await ActivityLogModel.create({
-      action: 'Smart Merge & Upload',
-      description: `Added ${newCount.toLocaleString()} new records, updated ${updatedCount.toLocaleString()} existing records with missing data from ${filename || 'file'}${skippedCount > 0 ? ` (${skippedCount} empty rows skipped)` : ''}`,
-      user: 'Easin Arafat',
+      action: 'File Uploaded',
+      description: `Uploaded "${filename || 'file'}" with ${validRecords.length.toLocaleString()} rows (${newCount.toLocaleString()} new, ${updatedCount.toLocaleString()} merged)${skippedCount > 0 ? ` [${skippedCount} empty rows skipped]` : ''}`,
+      user: uploaderName,
       type: 'upload',
     });
 

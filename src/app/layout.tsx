@@ -2,6 +2,7 @@ import React from 'react';
 import type { Metadata } from 'next';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
+import { AuthProvider } from '@/components/auth/AuthContext';
 import { AppShell } from '@/components/layout/AppShell';
 import { Toaster } from 'sonner';
 
@@ -28,8 +29,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="antialiased bg-[#F7F8FA] dark:bg-[#0B0F19] transition-colors duration-200">
         <ThemeProvider>
-          <AppShell>{children}</AppShell>
-          <Toaster position="top-right" richColors closeButton />
+          <AuthProvider>
+            <AppShell>{children}</AppShell>
+            <Toaster position="top-right" richColors closeButton />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
