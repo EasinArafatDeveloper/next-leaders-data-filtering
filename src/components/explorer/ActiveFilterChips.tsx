@@ -24,6 +24,10 @@ export function ActiveFilterChips({ filters, onRemoveFilter, onClearAll }: Activ
     });
   }
 
+  if (filters.tag && filters.tag !== 'All') {
+    activeChips.push({ key: 'tag', label: `🏷️ Tag: ${filters.tag}` });
+  }
+
   if (filters.gender && filters.gender !== 'All') {
     activeChips.push({ key: 'gender', label: `Gender: ${filters.gender}` });
   }

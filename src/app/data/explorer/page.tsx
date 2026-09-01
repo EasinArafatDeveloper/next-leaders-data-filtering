@@ -17,6 +17,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 const DEFAULT_FILTERS: FilterQueryState = {
   search: '',
   datasetId: 'All',
+  tag: 'All',
   gender: 'All',
   minAge: '',
   maxAge: '',
@@ -27,6 +28,7 @@ const DEFAULT_FILTERS: FilterQueryState = {
   lastOnlineTo: '',
   nameWise: false,
   numberWise: false,
+  tagWise: false,
   genderWise: false,
   ageWise: false,
   lastOnlineWise: false,
@@ -64,6 +66,7 @@ export default function DataExplorerPage() {
       const params = new URLSearchParams();
       if (currentFilters.search) params.set('search', currentFilters.search);
       if (currentFilters.datasetId && currentFilters.datasetId !== 'All') params.set('datasetId', currentFilters.datasetId);
+      if (currentFilters.tag && currentFilters.tag !== 'All') params.set('tag', currentFilters.tag);
       if (currentFilters.gender && currentFilters.gender !== 'All') params.set('gender', currentFilters.gender);
       if (currentFilters.minAge) params.set('minAge', String(currentFilters.minAge));
       if (currentFilters.maxAge) params.set('maxAge', String(currentFilters.maxAge));
@@ -75,6 +78,7 @@ export default function DataExplorerPage() {
 
       if (currentFilters.nameWise) params.set('nameWise', 'true');
       if (currentFilters.numberWise) params.set('numberWise', 'true');
+      if (currentFilters.tagWise) params.set('tagWise', 'true');
       if (currentFilters.genderWise) params.set('genderWise', 'true');
       if (currentFilters.ageWise) params.set('ageWise', 'true');
       if (currentFilters.lastOnlineWise) params.set('lastOnlineWise', 'true');
@@ -107,6 +111,7 @@ export default function DataExplorerPage() {
   }, [
     filters.search,
     filters.datasetId,
+    filters.tag,
     filters.gender,
     filters.minAge,
     filters.maxAge,
@@ -117,6 +122,7 @@ export default function DataExplorerPage() {
     filters.lastOnlineTo,
     filters.nameWise,
     filters.numberWise,
+    filters.tagWise,
     filters.genderWise,
     filters.ageWise,
     filters.lastOnlineWise,
@@ -142,6 +148,7 @@ export default function DataExplorerPage() {
       const resetValues: Partial<FilterQueryState> = {
         search: key === 'search' ? '' : prev.search,
         datasetId: key === 'datasetId' ? 'All' : prev.datasetId,
+        tag: key === 'tag' ? 'All' : prev.tag,
         gender: key === 'gender' ? 'All' : prev.gender,
         minAge: key === 'minAge' ? '' : prev.minAge,
         maxAge: key === 'maxAge' ? '' : prev.maxAge,
@@ -172,6 +179,7 @@ export default function DataExplorerPage() {
       const payload = {
         search: filters.search,
         datasetId: filters.datasetId !== 'All' ? filters.datasetId : undefined,
+        tag: filters.tag !== 'All' ? filters.tag : undefined,
         gender: filters.gender !== 'All' ? filters.gender : undefined,
         minAge: filters.minAge,
         maxAge: filters.maxAge,
@@ -182,6 +190,7 @@ export default function DataExplorerPage() {
         lastOnlineTo: filters.lastOnlineTo,
         nameWise: filters.nameWise,
         numberWise: filters.numberWise,
+        tagWise: filters.tagWise,
         genderWise: filters.genderWise,
         ageWise: filters.ageWise,
         lastOnlineWise: filters.lastOnlineWise,

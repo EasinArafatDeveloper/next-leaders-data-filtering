@@ -25,14 +25,17 @@ export async function GET(request: NextRequest) {
     const maxActiveDays = searchParams.get('maxActiveDays');
     const lastOnlineFrom = searchParams.get('lastOnlineFrom') || '';
     const lastOnlineTo = searchParams.get('lastOnlineTo') || '';
+    const status = searchParams.get('status') || '';
+    const location = searchParams.get('location') || '';
+    const tag = searchParams.get('tag') || '';
 
-    // Search target fields
     const nameWise = searchParams.get('nameWise') === 'true';
     const numberWise = searchParams.get('numberWise') === 'true';
     const genderWise = searchParams.get('genderWise') === 'true';
     const ageWise = searchParams.get('ageWise') === 'true';
     const lastOnlineWise = searchParams.get('lastOnlineWise') === 'true';
     const avatarTypeWise = searchParams.get('avatarTypeWise') === 'true';
+    const tagWise = searchParams.get('tagWise') === 'true';
 
     const sortBy = searchParams.get('sortBy') || 'createdAt';
     const sortOrder = searchParams.get('sortOrder') === 'asc' ? 1 : -1;
@@ -48,12 +51,13 @@ export async function GET(request: NextRequest) {
       const searchRegex = new RegExp(escaped, 'i');
 
       const isTargeted =
-        (nameWise && (numberWise || genderWise || ageWise || lastOnlineWise || avatarTypeWise)) ||
+        (nameWise && (numberWise || genderWise || ageWise || lastOnlineWise || avatarTypeWise || tagWise)) ||
         numberWise ||
         genderWise ||
         ageWise ||
         lastOnlineWise ||
-        avatarTypeWise;
+        avatarTypeWise ||
+        tagWise;
 
       if (isTargeted) {
         const targetedConditions: any[] = [];
@@ -74,18 +78,26 @@ export async function GET(request: NextRequest) {
         if (avatarTypeWise) {
           targetedConditions.push({ avatarType: searchRegex });
         }
+        if (tagWise) {
+          targetedConditions.push({ tags: searchRegex });
+          targetedConditions.push({ category: searchRegex });
+          targetedConditions.push({ 'customFields.Tag / Label': searchRegex });
+        }
         if (targetedConditions.length > 0) {
           query.$or = targetedConditions;
         }
       } else {
-        // Universal Smart Omnisearch: Searches across Name, Phone, Email, Location, Nickname simultaneously
+        // Universal Smart Omnisearch: Searches across Name, Phone, Email, Location, Nickname, and Tags simultaneously
         const orConditions: any[] = [
           { name: searchRegex },
           { phone: searchRegex },
           { email: searchRegex },
           { location: searchRegex },
           { area: searchRegex },
+          { tags: searchRegex },
+          { category: searchRegex },
           { 'customFields.nickname': searchRegex },
+          { 'customFields.Tag / Label': searchRegex },
         ];
 
         if (cleanPhoneSearch && /\d/.test(cleanPhoneSearch)) {
@@ -99,6 +111,19 @@ export async function GET(request: NextRequest) {
     // 1.5. Dataset / Uploaded File filter
     if (datasetId && datasetId !== 'All') {
       query.datasetId = datasetId;
+    }
+
+    // 1.6. Tag / Category filter
+    if (tag && tag !== 'All') {
+      const tagRegex = new RegExp(`^${tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+      query.$and = query.$and || [];
+      query.$and.push({
+        $or: [
+          { tags: tagRegex },
+          { category: tagRegex },
+          { 'customFields.Tag / Label': tagRegex },
+        ],
+      });
     }
 
     // 2. Gender filter

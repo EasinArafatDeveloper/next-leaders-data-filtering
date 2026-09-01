@@ -124,6 +124,7 @@ export interface FilterQueryState {
   lastOnlineTo?: string;
   status?: string;
   location?: string;
+  tag?: string;
   // Search-wise target checkboxes
   nameWise?: boolean;
   numberWise?: boolean;
@@ -131,6 +132,7 @@ export interface FilterQueryState {
   ageWise?: boolean;
   lastOnlineWise?: boolean;
   avatarTypeWise?: boolean;
+  tagWise?: boolean;
   // View and pagination
   viewMode?: 'cards' | 'table';
   sortBy?: string;

@@ -17,6 +17,7 @@ import {
   RefreshCw,
   FileSpreadsheet,
   FolderOpen,
+  Tag,
 } from 'lucide-react';
 import { FilterQueryState, IDatasetSummary } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -31,6 +32,14 @@ interface FilterToolbarProps {
   onViewModeChange: (mode: 'cards' | 'table') => void;
   totalFilteredCount?: number;
 }
+
+const TAG_PRESETS = [
+  { label: '📱 iPhone User', value: 'iPhone User' },
+  { label: '💬 WhatsApp Active', value: 'WhatsApp Active' },
+  { label: '🟣 Viber Contact', value: 'Viber Contact' },
+  { label: '⭐ VIP Client', value: 'VIP Client' },
+  { label: '🏢 Corporate Lead', value: 'Corporate Lead' },
+];
 
 const OPERATOR_PRESETS = [
   { label: 'All Operators', prefix: '' },
@@ -62,13 +71,19 @@ export function FilterToolbar({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [searchQuery, setSearchQuery] = useState(filters.search || '');
   const [datasets, setDatasets] = useState<IDatasetSummary[]>([]);
+  const [tagsList, setTagsList] = useState<Array<{ name: string; count: number }>>([]);
 
-  // Fetch available datasets for file-level filtering
+  // Fetch available datasets and tags for filtering
   useEffect(() => {
     fetch('/api/data/datasets', { cache: 'no-store' })
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => setDatasets(data || []))
       .catch((err) => console.error('Failed to load datasets for filter:', err));
+
+    fetch('/api/data/tags', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : { tags: [] }))
+      .then((data) => setTagsList(data.tags || []))
+      .catch((err) => console.error('Failed to load tags for filter:', err));
   }, []);
 
   // Sync search input with prop
@@ -89,6 +104,7 @@ export function FilterToolbar({
   const activeFilterCount = [
     filters.search,
     filters.datasetId && filters.datasetId !== 'All',
+    filters.tag && filters.tag !== 'All',
     filters.gender && filters.gender !== 'All',
     filters.avatarType && filters.avatarType !== 'All',
     filters.minAge || filters.maxAge,
@@ -242,6 +258,30 @@ export function FilterToolbar({
           >
             All Records
           </button>
+
+          {/* Tag Quick Presets (iPhone User, WhatsApp Active, Viber, VIP) */}
+          {TAG_PRESETS.map((t) => {
+            const isSelected = filters.tag === t.value;
+            return (
+              <button
+                key={t.value}
+                type="button"
+                onClick={() =>
+                  onApplyFilters({
+                    tag: isSelected ? 'All' : t.value,
+                    page: 1,
+                  })
+                }
+                className={`px-3 py-1 rounded-full text-xs font-semibold shrink-0 transition-all ${
+                  isSelected
+                    ? 'bg-brand-600 text-white shadow-sm ring-2 ring-brand-500/20'
+                    : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                {t.label}
+              </button>
+            );
+          })}
 
           {/* With Photo */}
           <button
@@ -459,6 +499,38 @@ export function FilterToolbar({
                 </div>
               </div>
 
+              {/* Tag & Audience Segment Filter Banner */}
+              <div className="p-3.5 rounded-xl bg-purple-50/70 dark:bg-purple-950/40 border border-purple-200/80 dark:border-purple-900/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300">
+                    <Tag className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h5 className="font-bold text-gray-900 dark:text-white text-xs">
+                      🏷️ Tag & Audience Segment Scope
+                    </h5>
+                    <p className="text-[11px] text-gray-500">
+                      Filter records by attached audience tag (e.g. iPhone User, WhatsApp Active, VIP Client)
+                    </p>
+                  </div>
+                </div>
+
+                <div className="w-full sm:w-72 shrink-0">
+                  <select
+                    value={filters.tag || 'All'}
+                    onChange={(e) => onApplyFilters({ tag: e.target.value, page: 1 })}
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-purple-300 dark:border-purple-800 rounded-xl text-xs font-bold text-purple-700 dark:text-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm cursor-pointer truncate"
+                  >
+                    <option value="All">🏷️ All Tags & Audiences (Combined)</option>
+                    {tagsList.map((t) => (
+                      <option key={t.name} value={t.name}>
+                        {t.name} {t.count > 0 ? `(${t.count})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               {/* Grid 1: Demographics & Operators */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* 1. Phone / Operator Prefix */}
@@ -634,6 +706,7 @@ export function FilterToolbar({
                     {[
                       { key: 'nameWise' as keyof FilterQueryState, label: 'Name / Nickname' },
                       { key: 'numberWise' as keyof FilterQueryState, label: 'Phone Number' },
+                      { key: 'tagWise' as keyof FilterQueryState, label: '🏷️ Tag / Label' },
                       { key: 'genderWise' as keyof FilterQueryState, label: 'Gender' },
                       { key: 'ageWise' as keyof FilterQueryState, label: 'Age' },
                       { key: 'lastOnlineWise' as keyof FilterQueryState, label: 'Last Online' },

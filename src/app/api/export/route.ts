@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
     const {
       search,
       datasetId,
+      tag,
       gender,
       minAge,
       maxAge,
@@ -29,6 +30,7 @@ export async function POST(request: NextRequest) {
       ageWise,
       lastOnlineWise,
       avatarTypeWise,
+      tagWise,
     } = body || {};
 
     const query: any = {};
@@ -41,12 +43,13 @@ export async function POST(request: NextRequest) {
       const searchRegex = new RegExp(escaped, 'i');
 
       const isTargeted =
-        (nameWise && (numberWise || genderWise || ageWise || lastOnlineWise || avatarTypeWise)) ||
+        (nameWise && (numberWise || genderWise || ageWise || lastOnlineWise || avatarTypeWise || tagWise)) ||
         numberWise ||
         genderWise ||
         ageWise ||
         lastOnlineWise ||
-        avatarTypeWise;
+        avatarTypeWise ||
+        tagWise;
 
       if (isTargeted) {
         const targetedConditions: any[] = [];
@@ -63,6 +66,11 @@ export async function POST(request: NextRequest) {
           if (!isNaN(numVal)) targetedConditions.push({ age: numVal });
         }
         if (avatarTypeWise) targetedConditions.push({ avatarType: searchRegex });
+        if (tagWise) {
+          targetedConditions.push({ tags: searchRegex });
+          targetedConditions.push({ category: searchRegex });
+          targetedConditions.push({ 'customFields.Tag / Label': searchRegex });
+        }
         if (targetedConditions.length > 0) {
           query.$or = targetedConditions;
         }
@@ -73,7 +81,10 @@ export async function POST(request: NextRequest) {
           { email: searchRegex },
           { location: searchRegex },
           { area: searchRegex },
+          { tags: searchRegex },
+          { category: searchRegex },
           { 'customFields.nickname': searchRegex },
+          { 'customFields.Tag / Label': searchRegex },
         ];
 
         if (cleanPhoneSearch && /\d/.test(cleanPhoneSearch)) {
@@ -85,6 +96,18 @@ export async function POST(request: NextRequest) {
     }
 
     if (datasetId && datasetId !== 'All') query.datasetId = datasetId;
+
+    if (tag && tag !== 'All') {
+      const tagRegex = new RegExp(`^${tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+      query.$and = query.$and || [];
+      query.$and.push({
+        $or: [
+          { tags: tagRegex },
+          { category: tagRegex },
+          { 'customFields.Tag / Label': tagRegex },
+        ],
+      });
+    }
     if (gender && gender !== 'All') query.gender = gender;
     if (avatarType && avatarType !== 'All') query.avatarType = avatarType;
 
@@ -120,11 +143,12 @@ export async function POST(request: NextRequest) {
     const matchingRecords = await RecordModel.find(query).lean();
 
     // Map records to clean CSV columns
-    const csvData = matchingRecords.map((rec) => ({
+    const csvData = matchingRecords.map((rec: any) => ({
       ID: rec._id.toString(),
       Name: rec.name,
       Phone: rec.phone,
       Email: rec.email,
+      'Tags / Segments': (rec.tags && rec.tags.length > 0 ? rec.tags.join(', ') : rec.category || ''),
       Age: rec.age,
       Gender: rec.gender,
       'Avatar Type': rec.avatarType || 'With Avatar',
@@ -143,6 +167,7 @@ export async function POST(request: NextRequest) {
 
     const appliedFiltersList: string[] = [];
     if (search) appliedFiltersList.push(`Search: "${search}"`);
+    if (tag && tag !== 'All') appliedFiltersList.push(`Tag: ${tag}`);
     if (gender && gender !== 'All') appliedFiltersList.push(`Gender: ${gender}`);
     if (avatarType && avatarType !== 'All') appliedFiltersList.push(`Avatar: ${avatarType}`);
     if (minAge || maxAge) appliedFiltersList.push(`Age: ${minAge || 18}-${maxAge || 65}`);

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Check, FileSpreadsheet } from 'lucide-react';
+import { X, Check, FileSpreadsheet, Tag } from 'lucide-react';
 import { FilterQueryState, IDatasetSummary } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -25,7 +25,9 @@ export function FilterDrawerMobile({
   onReset,
 }: FilterDrawerMobileProps) {
   const [datasets, setDatasets] = useState<IDatasetSummary[]>([]);
+  const [tagsList, setTagsList] = useState<Array<{ name: string; count: number }>>([]);
   const [localDatasetId, setLocalDatasetId] = useState(filters.datasetId || 'All');
+  const [localTag, setLocalTag] = useState(filters.tag || 'All');
   const [localGender, setLocalGender] = useState(filters.gender || 'All');
   const [localStatus, setLocalStatus] = useState(filters.status || 'All');
   const [localLocation, setLocalLocation] = useState(filters.location || 'All');
@@ -38,6 +40,11 @@ export function FilterDrawerMobile({
         .then((res) => (res.ok ? res.json() : []))
         .then((data) => setDatasets(data || []))
         .catch(() => {});
+
+      fetch('/api/data/tags', { cache: 'no-store' })
+        .then((res) => (res.ok ? res.json() : { tags: [] }))
+        .then((data) => setTagsList(data.tags || []))
+        .catch(() => {});
     }
   }, [isOpen]);
 
@@ -46,6 +53,7 @@ export function FilterDrawerMobile({
     onApplyFilters({
       datasetId: localDatasetId,
       filename: found ? found.filename : '',
+      tag: localTag,
       gender: localGender,
       status: localStatus,
       location: localLocation,
@@ -58,6 +66,7 @@ export function FilterDrawerMobile({
 
   const handleReset = () => {
     setLocalDatasetId('All');
+    setLocalTag('All');
     setLocalGender('All');
     setLocalStatus('All');
     setLocalLocation('All');
@@ -117,6 +126,25 @@ export function FilterDrawerMobile({
                   {datasets.map((d) => (
                     <option key={d._id} value={d._id}>
                       📄 {d.filename} ({(d.totalRecords || 0).toLocaleString()} rows)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Tag / Audience Segment Selector */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <Tag className="w-3.5 h-3.5 text-brand-600" /> Tag & Audience Segment
+                </label>
+                <select
+                  value={localTag}
+                  onChange={(e) => setLocalTag(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-xs font-bold text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                >
+                  <option value="All">🏷️ All Tags & Audiences</option>
+                  {tagsList.map((t) => (
+                    <option key={t.name} value={t.name}>
+                      {t.name} {t.count > 0 ? `(${t.count})` : ''}
                     </option>
                   ))}
                 </select>
