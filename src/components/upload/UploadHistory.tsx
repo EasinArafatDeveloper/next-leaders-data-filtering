@@ -15,10 +15,13 @@ import {
   AlertTriangle,
   RefreshCw,
   Clock,
+  Sparkles,
+  BarChart3,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { IDatasetSummary } from '@/types';
+import { DatasetAuditModal } from './DatasetAuditModal';
 
 interface UploadHistoryProps {
   refreshKey?: number;
@@ -30,6 +33,7 @@ export function UploadHistory({ refreshKey = 0, onDatasetDeleted }: UploadHistor
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [datasetToDelete, setDatasetToDelete] = useState<IDatasetSummary | null>(null);
+  const [selectedAuditDataset, setSelectedAuditDataset] = useState<IDatasetSummary | null>(null);
 
   const fetchDatasets = useCallback(async () => {
     setIsLoading(true);
@@ -214,9 +218,18 @@ export function UploadHistory({ refreshKey = 0, onDatasetDeleted }: UploadHistor
 
                 {/* Right: Actions */}
                 <div className="flex items-center space-x-2 shrink-0 self-end sm:self-center">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedAuditDataset(item)}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-brand-50 hover:bg-brand-100 dark:bg-brand-950/50 dark:hover:bg-brand-900/60 text-brand-700 dark:text-brand-300 border border-brand-200/80 dark:border-brand-900/60 text-xs font-semibold transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                    title="View match history & field update breakdown"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
+                    <span>Match Report</span>
+                  </button>
                   <Link
                     href="/data/explorer"
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-200 hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-950/60 dark:hover:text-brand-400 text-xs font-semibold transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-slate-700 text-xs font-semibold transition-colors"
                   >
                     <Eye className="w-3.5 h-3.5" /> Explore
                   </Link>
@@ -322,6 +335,13 @@ export function UploadHistory({ refreshKey = 0, onDatasetDeleted }: UploadHistor
               </div>
             </motion.div>
           </div>
+        )}
+        {/* Dataset Match & Audit Details Modal */}
+        {selectedAuditDataset && (
+          <DatasetAuditModal
+            dataset={selectedAuditDataset}
+            onClose={() => setSelectedAuditDataset(null)}
+          />
         )}
       </AnimatePresence>
     </div>

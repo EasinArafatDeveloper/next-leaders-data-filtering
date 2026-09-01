@@ -19,12 +19,40 @@ export interface IRecord {
   updatedAt?: string | Date;
 }
 
+export interface IFieldUpdateSummary {
+  emailUpdated?: number;
+  phoneUpdated?: number;
+  nameUpdated?: number;
+  ageUpdated?: number;
+  genderUpdated?: number;
+  locationUpdated?: number;
+  avatarUpdated?: number;
+  activeDaysUpdated?: number;
+  lastActiveUpdated?: number;
+  customFieldsUpdated?: number;
+}
+
+export interface IMatchAuditItem {
+  rowNumber: number;
+  identifier: string;
+  name: string;
+  status: 'new' | 'updated' | 'unchanged';
+  updatedFields: string[];
+  changes?: { field: string; from: string; to: string }[];
+}
+
 export interface IDatasetSummary {
   _id?: string;
   filename: string;
   totalRecords: number;
+  liveRecordsCount?: number;
+  totalRowsInFile?: number;
   newRecordsCount?: number;
   updatedRecordsCount?: number;
+  unchangedRecordsCount?: number;
+  skippedRowsCount?: number;
+  fieldUpdatesSummary?: IFieldUpdateSummary;
+  auditSample?: IMatchAuditItem[];
   totalFields: number;
   fileSize: string;
   status: 'Ready' | 'Processing' | 'Failed';

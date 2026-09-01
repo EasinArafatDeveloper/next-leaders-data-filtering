@@ -226,6 +226,28 @@ export async function POST(request: NextRequest) {
     let updatedCount = 0;
     let unchangedCount = 0;
 
+    const fieldUpdatesSummary = {
+      emailUpdated: 0,
+      phoneUpdated: 0,
+      nameUpdated: 0,
+      ageUpdated: 0,
+      genderUpdated: 0,
+      locationUpdated: 0,
+      avatarUpdated: 0,
+      activeDaysUpdated: 0,
+      lastActiveUpdated: 0,
+      customFieldsUpdated: 0,
+    };
+
+    const auditSample: Array<{
+      rowNumber: number;
+      identifier: string;
+      name: string;
+      status: 'new' | 'updated' | 'unchanged';
+      updatedFields: string[];
+      changes: Array<{ field: string; from: string; to: string }>;
+    }> = [];
+
     // Track processed IDs in this batch to prevent duplicate updates within the same file
     const matchedDocIds = new Set<string>();
 
@@ -236,9 +258,14 @@ export async function POST(request: NextRequest) {
 
     const dataset = await DatasetModel.create({
       filename: filename || 'uploaded-dataset.csv',
-      totalRecords: validRecords.length,
+      totalRecords: 0,
+      totalRowsInFile: rows.length,
       newRecordsCount: 0,
       updatedRecordsCount: 0,
+      unchangedRecordsCount: 0,
+      skippedRowsCount: skippedCount,
+      fieldUpdatesSummary,
+      auditSample: [],
       totalFields: totalFieldsCount,
       fileSize: fileSize || `${(JSON.stringify(rows).length / 1024).toFixed(1)} KB`,
       status: 'Ready',
@@ -248,7 +275,8 @@ export async function POST(request: NextRequest) {
 
     const datasetId = dataset._id.toString();
 
-    for (const incoming of validRecords) {
+    validRecords.forEach((incoming, idx) => {
+      const rowNum = idx + 1;
       // Find matching existing record: first by phone, then by email
       const matched = (incoming.phone ? phoneMap.get(incoming.phone) : null) ||
                       (incoming.email ? emailMap.get(incoming.email) : null);
@@ -257,52 +285,82 @@ export async function POST(request: NextRequest) {
         matchedDocIds.add(matched._id.toString());
 
         const updateFields: any = {};
+        const changedList: string[] = [];
+        const diffs: Array<{ field: string; from: string; to: string }> = [];
 
         // Merge / Fill missing email
         if ((!matched.email || matched.email === '') && incoming.email) {
           updateFields.email = incoming.email;
+          changedList.push('Email');
+          diffs.push({ field: 'Email', from: matched.email || '(Empty)', to: incoming.email });
+          fieldUpdatesSummary.emailUpdated++;
         }
 
         // Merge / Improve Name if previous was empty or generic 'User (..)'
         if (incoming.name && (!matched.name || matched.name.startsWith('User (')) && !incoming.name.startsWith('User (')) {
           updateFields.name = incoming.name;
+          changedList.push('Name');
+          diffs.push({ field: 'Name', from: matched.name || '(Empty)', to: incoming.name });
+          fieldUpdatesSummary.nameUpdated++;
         }
 
         // Merge / Fill missing Phone
         if ((!matched.phone || matched.phone === '') && incoming.phone) {
           updateFields.phone = incoming.phone;
+          changedList.push('Phone');
+          diffs.push({ field: 'Phone', from: matched.phone || '(Empty)', to: incoming.phone });
+          fieldUpdatesSummary.phoneUpdated++;
         }
 
         // Merge / Fill missing Age
         if ((!matched.age || matched.age === 0) && incoming.age > 0) {
           updateFields.age = incoming.age;
+          changedList.push('Age');
+          diffs.push({ field: 'Age', from: String(matched.age || 0), to: String(incoming.age) });
+          fieldUpdatesSummary.ageUpdated++;
         }
 
         // Merge / Fill missing Gender
         if ((!matched.gender || matched.gender === 'Other') && incoming.gender && incoming.gender !== 'Other') {
           updateFields.gender = incoming.gender;
+          changedList.push('Gender');
+          diffs.push({ field: 'Gender', from: matched.gender || 'Other', to: incoming.gender });
+          fieldUpdatesSummary.genderUpdated++;
         }
 
         // Merge / Fill missing Avatar URL / Type
         if ((!matched.avatarUrl || matched.avatarUrl === '') && incoming.avatarUrl) {
           updateFields.avatarUrl = incoming.avatarUrl;
           updateFields.avatarType = 'With Avatar';
+          changedList.push('Avatar Photo');
+          diffs.push({ field: 'Avatar Photo', from: '(No Photo)', to: incoming.avatarUrl });
+          fieldUpdatesSummary.avatarUpdated++;
         }
 
         // Merge / Fill missing Location / Area / Address
         if ((!matched.location || matched.location === '') && incoming.location) {
           updateFields.location = incoming.location;
+          changedList.push('Location');
+          diffs.push({ field: 'Location', from: matched.location || '(Empty)', to: incoming.location });
+          fieldUpdatesSummary.locationUpdated++;
         }
         if ((!matched.area || matched.area === '') && incoming.area) {
           updateFields.area = incoming.area;
+          changedList.push('Area');
+          diffs.push({ field: 'Area', from: matched.area || '(Empty)', to: incoming.area });
         }
         if ((!matched.address || matched.address === '') && incoming.address) {
           updateFields.address = incoming.address;
+          changedList.push('Address');
+          diffs.push({ field: 'Address', from: matched.address || '(Empty)', to: incoming.address });
         }
 
         // Update Active Days if new has higher/newer count
         if (incoming.activeDays > 0 && (!matched.activeDays || incoming.activeDays > matched.activeDays)) {
           updateFields.activeDays = incoming.activeDays;
+          changedList.push('Active Days');
+          diffs.push({ field: 'Active Days', from: String(matched.activeDays || 0), to: String(incoming.activeDays) });
+          fieldUpdatesSummary.activeDaysUpdated++;
         }
 
         // Update Last Online if incoming has newer date
@@ -311,13 +369,23 @@ export async function POST(request: NextRequest) {
           const existingDate = matched.lastActive ? new Date(matched.lastActive) : new Date(0);
           if (incomingDate > existingDate) {
             updateFields.lastActive = incomingDate;
+            changedList.push('Last Online');
+            diffs.push({
+              field: 'Last Online',
+              from: matched.lastActive ? new Date(matched.lastActive).toISOString().split('T')[0] : '(None)',
+              to: incomingDate.toISOString().split('T')[0],
+            });
+            fieldUpdatesSummary.lastActiveUpdated++;
           }
         }
 
         // Merge Custom Fields without overwriting existing custom keys
-        const mergedCustom = { ...(matched.customFields || {}), ...(incoming.customFields || {}) };
-        if (Object.keys(incoming.customFields || {}).length > 0) {
+        const incomingCustomKeys = Object.keys(incoming.customFields || {});
+        if (incomingCustomKeys.length > 0) {
+          const mergedCustom = { ...(matched.customFields || {}), ...(incoming.customFields || {}) };
           updateFields.customFields = mergedCustom;
+          changedList.push('Custom Fields');
+          fieldUpdatesSummary.customFieldsUpdated += incomingCustomKeys.length;
         }
 
         if (Object.keys(updateFields).length > 0) {
@@ -328,16 +396,52 @@ export async function POST(request: NextRequest) {
             },
           });
           updatedCount++;
+
+          if (auditSample.length < 300) {
+            auditSample.push({
+              rowNumber: rowNum,
+              identifier: incoming.phone || incoming.email || incoming.name,
+              name: incoming.name || matched.name,
+              status: 'updated',
+              updatedFields: changedList,
+              changes: diffs,
+            });
+          }
         } else {
           unchangedCount++;
+          if (auditSample.length < 300) {
+            auditSample.push({
+              rowNumber: rowNum,
+              identifier: incoming.phone || incoming.email || incoming.name,
+              name: incoming.name || matched.name,
+              status: 'unchanged',
+              updatedFields: [],
+              changes: [],
+            });
+          }
         }
       } else {
         // Brand new record - tag with datasetId
         incoming.datasetId = datasetId;
         newRecordsToInsert.push(incoming);
         newCount++;
+
+        if (auditSample.length < 300) {
+          auditSample.push({
+            rowNumber: rowNum,
+            identifier: incoming.phone || incoming.email || incoming.name,
+            name: incoming.name,
+            status: 'new',
+            updatedFields: ['New Contact Added'],
+            changes: [
+              { field: 'Contact Phone', from: '(None)', to: incoming.phone || 'N/A' },
+              { field: 'Gender / Age', from: '(None)', to: `${incoming.gender || 'N/A'} / ${incoming.age || 'N/A'}` },
+              { field: 'Location', from: '(None)', to: incoming.location || 'N/A' },
+            ],
+          });
+        }
       }
-    }
+    });
 
     // Execute bulk insertions in chunks
     if (newRecordsToInsert.length > 0) {
@@ -353,10 +457,14 @@ export async function POST(request: NextRequest) {
       await RecordModel.bulkWrite(bulkUpdateOps);
     }
 
-    // Update dataset record counts
+    // Update dataset record counts and audit details
     dataset.newRecordsCount = newCount;
     dataset.updatedRecordsCount = updatedCount;
-    dataset.totalRecords = validRecords.length;
+    dataset.unchangedRecordsCount = unchangedCount;
+    dataset.skippedRowsCount = skippedCount;
+    dataset.totalRecords = newCount;
+    dataset.fieldUpdatesSummary = fieldUpdatesSummary;
+    dataset.auditSample = auditSample;
     await dataset.save();
 
     const totalRecordsInDb = await RecordModel.countDocuments({});
@@ -364,7 +472,7 @@ export async function POST(request: NextRequest) {
     // Log Activity
     await ActivityLogModel.create({
       action: 'File Uploaded',
-      description: `Uploaded "${filename || 'file'}" with ${validRecords.length.toLocaleString()} rows (${newCount.toLocaleString()} new, ${updatedCount.toLocaleString()} merged)${skippedCount > 0 ? ` [${skippedCount} empty rows skipped]` : ''}`,
+      description: `Uploaded "${filename || 'file'}" with ${validRecords.length.toLocaleString()} rows (${newCount.toLocaleString()} new, ${updatedCount.toLocaleString()} merged, ${unchangedCount.toLocaleString()} duplicate)${skippedCount > 0 ? ` [${skippedCount} empty rows skipped]` : ''}`,
       user: uploaderName,
       type: 'upload',
     });

@@ -7,18 +7,45 @@ import { getSessionUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (id) {
+      const dataset = await DatasetModel.findById(id).lean();
+      if (!dataset) {
+        return NextResponse.json({ error: 'Dataset not found' }, { status: 404 });
+      }
+      const liveCount = await RecordModel.countDocuments({
+        $or: [{ datasetId: id }, { datasetId: (dataset as any)._id.toString() }],
+      });
+      return NextResponse.json({
+        ...dataset,
+        liveRecordsCount: liveCount,
+        totalRecords: liveCount,
+      });
+    }
+
     const datasets = await DatasetModel.find({}).sort({ uploadedAt: -1 }).lean();
 
     // Attach real-time count of records associated with each dataset
     const datasetsWithCounts = await Promise.all(
       datasets.map(async (d: any) => {
-        const liveCount = await RecordModel.countDocuments({ datasetId: d._id.toString() });
+        const liveCount = await RecordModel.countDocuments({
+          $or: [{ datasetId: d._id.toString() }, { datasetId: d._id }],
+        });
+
+        // Sync totalRecords in background if differed
+        if (d.totalRecords !== liveCount && d.newRecordsCount === undefined) {
+          DatasetModel.updateOne({ _id: d._id }, { $set: { totalRecords: liveCount } }).catch(() => {});
+        }
+
         return {
           ...d,
-          liveRecordsCount: liveCount > 0 ? liveCount : d.totalRecords,
+          totalRecords: liveCount,
+          liveRecordsCount: liveCount,
         };
       })
     );
