@@ -6,9 +6,17 @@ import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 
 interface DropZoneProps {
-  onFileParsed: (filename: string, rows: any[], fileSize: string) => void;
+  onFileParsed: (filename: string, rows: any[], fileSize: string, customTag?: string) => void;
   isProcessing?: boolean;
 }
+
+const TAG_PRESETS = [
+  { label: '📱 iPhone User', value: 'iPhone User' },
+  { label: '💬 WhatsApp Active', value: 'WhatsApp Active' },
+  { label: '🟣 Viber Contact', value: 'Viber Contact' },
+  { label: '⭐ VIP Client', value: 'VIP Client' },
+  { label: '🏢 Corporate Lead', value: 'Corporate Lead' },
+];
 
 export function DropZone({ onFileParsed, isProcessing }: DropZoneProps) {
   const [dragActive, setDragActive] = useState(false);
@@ -16,7 +24,9 @@ export function DropZone({ onFileParsed, isProcessing }: DropZoneProps) {
     name: string;
     size: string;
     rows: any[];
+    isSingleColumn?: boolean;
   } | null>(null);
+  const [customTag, setCustomTag] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -46,7 +56,19 @@ export function DropZone({ onFileParsed, isProcessing }: DropZoneProps) {
         skipEmptyLines: true,
         complete: (results) => {
           if (results.data && results.data.length > 0) {
-            setSelectedFile({ name: fileName, size: fileSizeStr, rows: results.data });
+            const firstRowKeys = Object.keys((results.data[0] as any) || {});
+            const isSingle = firstRowKeys.length <= 2;
+            setSelectedFile({
+              name: fileName,
+              size: fileSizeStr,
+              rows: results.data,
+              isSingleColumn: isSingle,
+            });
+            // Suggest default tag from filename if filename has clues like iphone or whatsapp
+            const lowerName = fileName.toLowerCase();
+            if (lowerName.includes('iphone')) setCustomTag('iPhone User');
+            else if (lowerName.includes('whatsapp') || lowerName.includes('wa')) setCustomTag('WhatsApp Active');
+            else if (lowerName.includes('viber')) setCustomTag('Viber Contact');
           } else {
             setError('The selected CSV file appears to be empty.');
           }
@@ -67,7 +89,18 @@ export function DropZone({ onFileParsed, isProcessing }: DropZoneProps) {
           const jsonRows = XLSX.utils.sheet_to_json(worksheet);
 
           if (jsonRows && jsonRows.length > 0) {
-            setSelectedFile({ name: fileName, size: fileSizeStr, rows: jsonRows });
+            const firstRowKeys = Object.keys((jsonRows[0] as any) || {});
+            const isSingle = firstRowKeys.length <= 2;
+            setSelectedFile({
+              name: fileName,
+              size: fileSizeStr,
+              rows: jsonRows,
+              isSingleColumn: isSingle,
+            });
+            const lowerName = fileName.toLowerCase();
+            if (lowerName.includes('iphone')) setCustomTag('iPhone User');
+            else if (lowerName.includes('whatsapp') || lowerName.includes('wa')) setCustomTag('WhatsApp Active');
+            else if (lowerName.includes('viber')) setCustomTag('Viber Contact');
           } else {
             setError('The selected Excel file contains no data rows.');
           }
@@ -106,7 +139,7 @@ export function DropZone({ onFileParsed, isProcessing }: DropZoneProps) {
 
   const handleUploadTrigger = () => {
     if (selectedFile) {
-      onFileParsed(selectedFile.name, selectedFile.rows, selectedFile.size);
+      onFileParsed(selectedFile.name, selectedFile.rows, selectedFile.size, customTag.trim());
     }
   };
 
@@ -147,7 +180,7 @@ export function DropZone({ onFileParsed, isProcessing }: DropZoneProps) {
           </span>
         </p>
         <span className="inline-block mt-3 px-3 py-1 rounded-full bg-gray-100 dark:bg-slate-800 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
-          Supported: CSV, XLSX, XLS (up to 50MB)
+          Supported: CSV, XLSX, XLS (Single-column or Multi-column, up to 50MB)
         </span>
       </div>
 
@@ -161,39 +194,106 @@ export function DropZone({ onFileParsed, isProcessing }: DropZoneProps) {
 
       {/* Selected File Card & Actions */}
       {selectedFile && (
-        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-card space-y-4 animate-in fade-in">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 border border-emerald-200 dark:border-emerald-900">
-                <FileSpreadsheet className="w-5 h-5" />
+        <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-gray-200/90 dark:border-slate-800 shadow-card space-y-5 animate-in fade-in">
+          {/* File Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100 dark:border-slate-800">
+            <div className="flex items-center space-x-3.5">
+              <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 border border-emerald-200 dark:border-emerald-900 shrink-0">
+                <FileSpreadsheet className="w-6 h-6" />
               </div>
               <div>
                 <h4 className="text-sm font-bold text-gray-900 dark:text-white">
                   {selectedFile.name}
                 </h4>
-                <p className="text-xs text-gray-500 font-medium">
+                <p className="text-xs text-gray-500 font-medium mt-0.5">
                   {selectedFile.rows.length.toLocaleString()} rows detected &bull; {selectedFile.size}
+                  {selectedFile.isSingleColumn && (
+                    <span className="ml-2 px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 font-semibold text-[10px]">
+                      Single-Column Phone List Detected
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
-            <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-              <CheckCircle2 className="w-4 h-4" /> Parsed Ready
+            <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 self-start sm:self-center">
+              <CheckCircle2 className="w-4 h-4" /> Parsed & Ready
             </span>
           </div>
 
-          <div className="pt-3 border-t border-gray-100 dark:border-slate-800 flex justify-end">
+          {/* Custom Tag & Audience Label Box */}
+          <div className="p-4 rounded-2xl bg-brand-50/50 dark:bg-brand-950/30 border border-brand-200/70 dark:border-brand-900/50 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+              <div>
+                <label className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                  🏷️ Assign Tag / Attribute to these numbers (Optional)
+                </label>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                  Attach a custom label (e.g. <strong>iPhone User</strong>, <strong>WhatsApp Active</strong>, <strong>VIP</strong>). Matching existing contacts in your database will be updated automatically!
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Preset Buttons */}
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {TAG_PRESETS.map((preset) => (
+                <button
+                  key={preset.value}
+                  type="button"
+                  onClick={() => setCustomTag(customTag === preset.value ? '' : preset.value)}
+                  className={`px-3 py-1 rounded-xl text-xs font-semibold border transition-all ${
+                    customTag === preset.value
+                      ? 'bg-brand-600 text-white border-brand-600 shadow-sm shadow-brand-600/20'
+                      : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-slate-700 hover:bg-gray-50'
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Custom Free-Text Tag Input */}
+            <div className="pt-1">
+              <input
+                type="text"
+                value={customTag}
+                onChange={(e) => setCustomTag(e.target.value)}
+                placeholder="Or type a custom label e.g. 'iPhone 15 Pro Users', 'Facebook Lead', 'May Promo'..."
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-brand-200 dark:border-brand-900/80 rounded-xl text-xs font-medium text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm"
+              />
+            </div>
+          </div>
+
+          {/* Action Row */}
+          <div className="pt-2 flex items-center justify-between flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedFile(null);
+                setCustomTag('');
+                if (inputRef.current) inputRef.current.value = '';
+              }}
+              className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              Choose Different File
+            </button>
+
             <button
               onClick={handleUploadTrigger}
               disabled={isProcessing}
-              className="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs shadow-md shadow-brand-600/30 flex items-center gap-2 transition-all disabled:opacity-60"
+              className="px-7 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-lg shadow-brand-600/25 flex items-center gap-2 transition-all hover:scale-105 active:scale-95 disabled:opacity-60 cursor-pointer"
             >
               {isProcessing ? (
                 <>
-                  <RefreshCw className="w-4 h-4 animate-spin" /> Processing Dataset...
+                  <RefreshCw className="w-4 h-4 animate-spin" /> Processing Dataset & Merging...
                 </>
               ) : (
                 <>
-                  <UploadCloud className="w-4 h-4" /> Upload & Process Dataset
+                  <UploadCloud className="w-4 h-4" /> Upload & Merge Dataset
+                  {customTag && (
+                    <span className="px-2 py-0.5 rounded-full bg-white/20 text-[10px] font-semibold">
+                      Tag: {customTag}
+                    </span>
+                  )}
                 </>
               )}
             </button>

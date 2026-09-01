@@ -17,6 +17,7 @@ import {
   Copy,
   Check,
   Sparkles,
+  Tag,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -254,7 +255,34 @@ export function RecordDetailDrawer({ record, onClose }: RecordDetailDrawerProps)
             </div>
           </div>
 
-          {/* 4. Additional Attributes / Metadata */}
+          {/* 4. Attached Tags & Audience Segments */}
+          {((record.tags && record.tags.length > 0) || record.category) && (
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                <Tag className="w-3.5 h-3.5 text-brand-600" /> Attached Tags & Audience Notes
+              </h4>
+              <div className="p-4 rounded-2xl bg-gray-50/80 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-800/80 flex flex-wrap gap-2">
+                {record.tags && record.tags.length > 0 ? (
+                  record.tags.map((tag, tIdx) => (
+                    <span
+                      key={tIdx}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300 border border-brand-200/80 dark:border-brand-900/60 shadow-sm"
+                    >
+                      <Tag className="w-3 h-3 text-brand-500" />
+                      {tag}
+                    </span>
+                  ))
+                ) : record.category ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300 border border-brand-200/80 dark:border-brand-900/60 shadow-sm">
+                    <Tag className="w-3 h-3 text-brand-500" />
+                    {record.category}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          )}
+
+          {/* 5. Additional Attributes / Metadata */}
           {record.customFields && Object.keys(record.customFields).length > 0 && (
             <div className="space-y-3">
               <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider flex items-center gap-1.5">

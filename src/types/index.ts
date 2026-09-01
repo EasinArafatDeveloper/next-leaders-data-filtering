@@ -13,6 +13,8 @@ export interface IRecord {
   activeDays: number;
   avatarType?: 'With Avatar' | 'Without Avatar' | 'Custom' | 'Initial' | string;
   avatarUrl?: string;
+  tags?: string[];
+  category?: string;
   customFields?: Record<string, any>;
   datasetId?: string;
   createdAt?: string | Date;
@@ -27,6 +29,7 @@ export interface IFieldUpdateSummary {
   genderUpdated?: number;
   locationUpdated?: number;
   avatarUpdated?: number;
+  tagsUpdated?: number;
   activeDaysUpdated?: number;
   lastActiveUpdated?: number;
   customFieldsUpdated?: number;

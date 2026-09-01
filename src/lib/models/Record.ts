@@ -14,6 +14,8 @@ export interface IRecordDocument extends Document {
   activeDays: number;
   avatarType: string;
   avatarUrl?: string;
+  tags?: string[];
+  category?: string;
   customFields?: Map<string, any>;
   datasetId?: string;
   createdAt: Date;
@@ -35,6 +37,8 @@ const RecordSchema: Schema = new Schema(
     activeDays: { type: Number, default: 0, index: true },
     avatarType: { type: String, default: 'With Avatar', index: true },
     avatarUrl: { type: String, default: '' },
+    tags: [{ type: String, index: true }],
+    category: { type: String, default: '', index: true },
     customFields: { type: Schema.Types.Mixed, default: {} },
     datasetId: { type: String, index: true },
   },

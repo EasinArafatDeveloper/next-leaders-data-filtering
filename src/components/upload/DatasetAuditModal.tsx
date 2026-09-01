@@ -72,6 +72,7 @@ export function DatasetAuditModal({ dataset, onClose }: DatasetAuditModalProps) 
     (fieldSummary.ageUpdated || 0) > 0 ||
     (fieldSummary.genderUpdated || 0) > 0 ||
     (fieldSummary.phoneUpdated || 0) > 0 ||
+    (fieldSummary.tagsUpdated || 0) > 0 ||
     (fieldSummary.activeDaysUpdated || 0) > 0 ||
     (fieldSummary.customFieldsUpdated || 0) > 0;
 
@@ -256,6 +257,12 @@ export function DatasetAuditModal({ dataset, onClose }: DatasetAuditModalProps) 
                 {(fieldSummary.ageUpdated || 0) > 0 && (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-300 font-semibold border border-amber-200/80 dark:border-amber-900/50 shadow-sm">
                     🎂 +{fieldSummary.ageUpdated} Ages Filled
+                  </span>
+                )}
+                {(fieldSummary.tagsUpdated || 0) > 0 && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 text-purple-700 dark:text-purple-300 font-semibold border border-purple-200/80 dark:border-purple-900/50 shadow-sm">
+                    <Tag className="w-3.5 h-3.5 text-purple-500" />
+                    +{fieldSummary.tagsUpdated} Tags Attached
                   </span>
                 )}
                 {(fieldSummary.customFieldsUpdated || 0) > 0 && (

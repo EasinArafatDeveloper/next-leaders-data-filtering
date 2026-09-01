@@ -16,6 +16,7 @@ export interface IDatasetDocument extends Document {
     genderUpdated?: number;
     locationUpdated?: number;
     avatarUpdated?: number;
+    tagsUpdated?: number;
     activeDaysUpdated?: number;
     lastActiveUpdated?: number;
     customFieldsUpdated?: number;
@@ -52,6 +53,7 @@ const DatasetSchema: Schema = new Schema(
       genderUpdated: { type: Number, default: 0 },
       locationUpdated: { type: Number, default: 0 },
       avatarUpdated: { type: Number, default: 0 },
+      tagsUpdated: { type: Number, default: 0 },
       activeDaysUpdated: { type: Number, default: 0 },
       lastActiveUpdated: { type: Number, default: 0 },
       customFieldsUpdated: { type: Number, default: 0 },

@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     await connectToDatabase();
 
     const body = await request.json();
-    const { filename, rows, fileSize } = body;
+    const { filename, rows, fileSize, customTag, customCategory, customAttributes } = body;
 
     if (!rows || !Array.isArray(rows) || rows.length === 0) {
       return NextResponse.json(
@@ -44,6 +44,8 @@ export async function POST(request: NextRequest) {
         activeDays: 0,
         avatarType: 'Without Avatar',
         avatarUrl: '',
+        tags: [],
+        category: '',
         lastActive: new Date(),
         customFields: {},
       };
@@ -158,10 +160,47 @@ export async function POST(request: NextRequest) {
         ) {
           const sVal = String(val || '').trim();
           normalizedRow.status = ['Active', 'Inactive', 'Pending', 'Suspended'].includes(sVal) ? sVal : 'Active';
+        } else if (
+          lowerKey === 'tag' ||
+          lowerKey === 'tags' ||
+          lowerKey === 'label' ||
+          lowerKey === 'category'
+        ) {
+          const tVal = String(val || '').trim();
+          if (tVal) {
+            normalizedRow.tags.push(tVal);
+            normalizedRow.category = tVal;
+          }
         } else {
           normalizedRow.customFields[key] = val;
         }
       });
+
+      // Single-column & raw number detector fallback
+      if (!normalizedRow.phone) {
+        for (const v of values) {
+          const cleanStr = String(v).replace(/[\s\+\-\(\)]/g, '');
+          if (cleanStr.length >= 7 && /^\d+$/.test(cleanStr)) {
+            normalizedRow.phone = String(v).trim();
+            break;
+          }
+        }
+      }
+
+      // Apply batch custom tag and category
+      if (customTag && typeof customTag === 'string' && customTag.trim()) {
+        const cleanTag = customTag.trim();
+        if (!normalizedRow.tags.includes(cleanTag)) {
+          normalizedRow.tags.push(cleanTag);
+        }
+        if (!normalizedRow.category) {
+          normalizedRow.category = customCategory ? customCategory.trim() : cleanTag;
+        }
+        normalizedRow.customFields['Tag / Label'] = cleanTag;
+      }
+      if (customAttributes && typeof customAttributes === 'object') {
+        Object.assign(normalizedRow.customFields, customAttributes);
+      }
 
       // Name fallback
       if (!normalizedRow.name) {
@@ -234,6 +273,7 @@ export async function POST(request: NextRequest) {
       genderUpdated: 0,
       locationUpdated: 0,
       avatarUpdated: 0,
+      tagsUpdated: 0,
       activeDaysUpdated: 0,
       lastActiveUpdated: 0,
       customFieldsUpdated: 0,
@@ -379,12 +419,35 @@ export async function POST(request: NextRequest) {
           }
         }
 
+        // Merge Tags / Labels into existing matched record
+        if (incoming.tags && incoming.tags.length > 0) {
+          const currentTags: string[] = Array.isArray(matched.tags) ? matched.tags : [];
+          const newTagsToAdd = incoming.tags.filter((t: string) => !currentTags.includes(t));
+          if (newTagsToAdd.length > 0) {
+            updateFields.tags = [...currentTags, ...newTagsToAdd];
+            changedList.push(`Tag: ${newTagsToAdd.join(', ')}`);
+            diffs.push({
+              field: 'Tag / Label',
+              from: currentTags.length > 0 ? currentTags.join(', ') : '(None)',
+              to: newTagsToAdd.join(', '),
+            });
+            fieldUpdatesSummary.tagsUpdated += newTagsToAdd.length;
+          }
+        }
+
+        // Merge Category if missing
+        if ((!matched.category || matched.category === '') && incoming.category) {
+          updateFields.category = incoming.category;
+          changedList.push('Category');
+          diffs.push({ field: 'Category', from: '(None)', to: incoming.category });
+        }
+
         // Merge Custom Fields without overwriting existing custom keys
         const incomingCustomKeys = Object.keys(incoming.customFields || {});
         if (incomingCustomKeys.length > 0) {
           const mergedCustom = { ...(matched.customFields || {}), ...(incoming.customFields || {}) };
           updateFields.customFields = mergedCustom;
-          changedList.push('Custom Fields');
+          changedList.push('Custom Attributes');
           fieldUpdatesSummary.customFieldsUpdated += incomingCustomKeys.length;
         }
 

@@ -2,7 +2,14 @@
 
 import React, { useState } from 'react';
 import { IRecord } from '@/types';
-import { ArrowUpDown, Eye, Phone, Mail, MapPin, Calendar, Image as ImageIcon } from 'lucide-react';
+import {
+  Phone,
+  Eye,
+  ArrowUpDown,
+  Calendar,
+  Image as ImageIcon,
+  Tag,
+} from 'lucide-react';
 
 interface TableViewProps {
   records: IRecord[];
@@ -163,6 +170,26 @@ export function TableView({
                         </div>
                         {record.email && (
                           <div className="text-[11px] text-gray-400">{record.email}</div>
+                        )}
+                        {((record.tags && record.tags.length > 0) || record.category) && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {record.tags && record.tags.length > 0 ? (
+                              record.tags.map((tag, tIdx) => (
+                                <span
+                                  key={tIdx}
+                                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300 border border-brand-200/80 dark:border-brand-900/60"
+                                >
+                                  <Tag className="w-2.5 h-2.5 text-brand-500" />
+                                  {tag}
+                                </span>
+                              ))
+                            ) : record.category ? (
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300 border border-brand-200/80 dark:border-brand-900/60">
+                                <Tag className="w-2.5 h-2.5 text-brand-500" />
+                                {record.category}
+                              </span>
+                            ) : null}
+                          </div>
                         )}
                       </div>
                     </div>

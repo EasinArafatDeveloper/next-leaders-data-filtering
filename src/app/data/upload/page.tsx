@@ -25,7 +25,7 @@ export default function UploadDataPage() {
 
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-  const handleFileParsed = async (filename: string, rows: any[], fileSize: string) => {
+  const handleFileParsed = async (filename: string, rows: any[], fileSize: string, customTag?: string) => {
     setUploadStage('uploading');
     setErrorMessage('');
     setCurrentStep(1); // Stage 1: Uploading
@@ -38,7 +38,7 @@ export default function UploadDataPage() {
       const res = await fetch('/api/data/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename, rows, fileSize }),
+        body: JSON.stringify({ filename, rows, fileSize, customTag }),
       });
 
       await sleep(300);

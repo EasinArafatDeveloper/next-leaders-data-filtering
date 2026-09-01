@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { IRecord } from '@/types';
-import { Phone, MapPin, Calendar, ArrowRight, Image as ImageIcon } from 'lucide-react';
+import { Phone, MapPin, Calendar, ArrowRight, Image as ImageIcon, Tag } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface CardViewProps {
@@ -134,6 +134,28 @@ export function CardView({ records, onSelectRecord, isLoading }: CardViewProps) 
                   {record.status}
                 </span>
               </div>
+
+              {/* Tag Badges (e.g. iPhone User, WhatsApp Active, VIP) */}
+              {((record.tags && record.tags.length > 0) || record.category) && (
+                <div className="flex flex-wrap gap-1 mt-2.5">
+                  {record.tags && record.tags.length > 0 ? (
+                    record.tags.map((tag, tIdx) => (
+                      <span
+                        key={tIdx}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300 border border-brand-200/80 dark:border-brand-900/60"
+                      >
+                        <Tag className="w-2.5 h-2.5 text-brand-500" />
+                        {tag}
+                      </span>
+                    ))
+                  ) : record.category ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300 border border-brand-200/80 dark:border-brand-900/60">
+                      <Tag className="w-2.5 h-2.5 text-brand-500" />
+                      {record.category}
+                    </span>
+                  ) : null}
+                </div>
+              )}
 
               {/* Data Grid Section */}
               <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-800/80 grid grid-cols-2 gap-2 text-xs">
