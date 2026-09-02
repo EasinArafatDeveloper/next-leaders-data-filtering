@@ -253,6 +253,7 @@ export async function POST(request: NextRequest) {
           const str = String(v || '').trim();
           if (str.startsWith('http://') || str.startsWith('https://')) {
             normalizedRow.avatarUrl = str;
+            normalizedRow.avatarOriginalUrl = str;
             normalizedRow.avatarType = 'With Avatar';
           }
         });
@@ -571,6 +572,71 @@ export async function POST(request: NextRequest) {
       user: uploaderName,
       type: 'upload',
     });
+
+    // Trigger background auto-archival for any new external avatar URLs
+    (async () => {
+      try {
+        const pendingDocs = await RecordModel.find({
+          $and: [
+            {
+              $or: [
+                { avatarUrl: { $regex: '^https?://', $options: 'i' } },
+                { avatarOriginalUrl: { $regex: '^https?://', $options: 'i' } },
+              ],
+            },
+            {
+              $or: [
+                { avatarBase64: { $exists: false } },
+                { avatarBase64: '' },
+                { avatarBase64: null },
+              ],
+            },
+          ],
+        })
+          .limit(80)
+          .select('_id avatarUrl avatarOriginalUrl');
+
+        if (pendingDocs.length > 0) {
+          const bulkOps: any[] = [];
+          await Promise.all(
+            pendingDocs.map(async (doc) => {
+              const u = doc.avatarOriginalUrl || doc.avatarUrl;
+              if (!u || !u.startsWith('http')) return;
+              try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 6000);
+                const resp = await fetch(u, {
+                  signal: controller.signal,
+                  headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+                });
+                clearTimeout(timeoutId);
+                if (resp.ok) {
+                  const arr = await resp.arrayBuffer();
+                  const buf = Buffer.from(arr);
+                  const ct = resp.headers.get('content-type') || 'image/jpeg';
+                  bulkOps.push({
+                    updateOne: {
+                      filter: { _id: doc._id },
+                      update: {
+                        $set: {
+                          avatarBase64: `data:${ct};base64,${buf.toString('base64')}`,
+                          avatarOriginalUrl: u,
+                        },
+                      },
+                    },
+                  });
+                }
+              } catch {}
+            })
+          );
+          if (bulkOps.length > 0) {
+            await RecordModel.bulkWrite(bulkOps);
+          }
+        }
+      } catch (err) {
+        console.error('Background auto-archiver error:', err);
+      }
+    })();
 
     return NextResponse.json({
       success: true,
