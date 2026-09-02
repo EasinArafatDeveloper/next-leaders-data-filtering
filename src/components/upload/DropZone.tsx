@@ -11,6 +11,11 @@ import {
   X,
   Tag,
   Sparkles,
+  Filter,
+  Check,
+  ListFilter,
+  Layers,
+  Phone,
 } from 'lucide-react';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
@@ -31,14 +36,187 @@ const DEFAULT_PRESET_TAGS = [
   { label: '💼 Business Account', value: 'Business Account' },
 ];
 
+interface StatusOption {
+  value: string;
+  displayLabel: string;
+  count: number;
+  variant: 'all' | 'positive' | 'negative' | 'neutral';
+}
+
+interface FileAnalysis {
+  fileType: 'single_column_phone' | 'phone_with_status' | 'multi_column_dataset';
+  totalColumns: number;
+  columnNames: string[];
+  phoneColumnName?: string;
+  statusColumnName?: string;
+  statusOptions: StatusOption[];
+  totalRows: number;
+}
+
+function analyzeDatasetFile(rows: any[]): FileAnalysis {
+  if (!rows || rows.length === 0) {
+    return {
+      fileType: 'single_column_phone',
+      totalColumns: 0,
+      columnNames: [],
+      statusOptions: [],
+      totalRows: 0,
+    };
+  }
+
+  const sampleRow = rows[0] || {};
+  const rawKeys = Object.keys(sampleRow).filter((k) => k && k.trim().length > 0);
+  const totalRows = rows.length;
+
+  if (rawKeys.length <= 1) {
+    return {
+      fileType: 'single_column_phone',
+      totalColumns: Math.max(1, rawKeys.length),
+      columnNames: rawKeys,
+      phoneColumnName: rawKeys[0] || 'Phone',
+      statusOptions: [],
+      totalRows,
+    };
+  }
+
+  // 1. Identify phone column
+  let phoneKey = '';
+  for (const key of rawKeys) {
+    const lk = key.toLowerCase().replace(/[\s_\.-]/g, '');
+    if (['phone', 'mobile', 'number', 'cell', 'msisdn', 'contact', 'tel'].includes(lk)) {
+      phoneKey = key;
+      break;
+    }
+  }
+
+  if (!phoneKey) {
+    for (const key of rawKeys) {
+      let numericCount = 0;
+      for (let i = 0; i < Math.min(rows.length, 15); i++) {
+        const val = String(rows[i]?.[key] || '').replace(/[\s\+\-\(\)]/g, '');
+        if (val.length >= 7 && /^\d+$/.test(val)) numericCount++;
+      }
+      if (numericCount >= Math.min(rows.length, 10) * 0.7) {
+        phoneKey = key;
+        break;
+      }
+    }
+  }
+
+  // 2. Identify status / Yes-No / Decision column
+  let candidateStatusKey = '';
+  const otherKeys = rawKeys.filter((k) => k !== phoneKey);
+
+  for (const key of otherKeys) {
+    const lk = key.toLowerCase().replace(/[\s_\.-]/g, '');
+    const isNamedStatus = [
+      'status',
+      'valid',
+      'verified',
+      'viber',
+      'whatsapp',
+      'active',
+      'hasavatar',
+      'avatar',
+      'decision',
+      'result',
+      'isvalid',
+      'check',
+      'yesno',
+      'yn',
+      'state',
+      'presence',
+      'tag',
+      'label',
+    ].includes(lk);
+
+    const valCounts = new Map<string, number>();
+    for (const r of rows) {
+      const v = String(r[key] === null || r[key] === undefined ? '' : r[key]).trim();
+      if (v) valCounts.set(v, (valCounts.get(v) || 0) + 1);
+    }
+
+    const uniqueCount = valCounts.size;
+    const isBinaryValues = Array.from(valCounts.keys()).some((v) =>
+      ['yes', 'no', 'true', 'false', 'y', 'n', '1', '0', 'active', 'inactive', 'valid', 'invalid', 'available'].includes(
+        v.toLowerCase()
+      )
+    );
+
+    if (isNamedStatus || (rawKeys.length === 2 && uniqueCount >= 1 && uniqueCount <= 8) || (isBinaryValues && uniqueCount <= 8)) {
+      candidateStatusKey = key;
+      break;
+    }
+  }
+
+  if (candidateStatusKey) {
+    const valCounts = new Map<string, number>();
+    for (const r of rows) {
+      const v = String(r[candidateStatusKey] === null || r[candidateStatusKey] === undefined ? '' : r[candidateStatusKey]).trim();
+      if (v) {
+        const keyMatch = Array.from(valCounts.keys()).find((k) => k.toLowerCase() === v.toLowerCase()) || v;
+        valCounts.set(keyMatch, (valCounts.get(keyMatch) || 0) + 1);
+      }
+    }
+
+    const options: StatusOption[] = [
+      {
+        value: 'ALL',
+        displayLabel: 'All Records',
+        count: totalRows,
+        variant: 'all',
+      },
+    ];
+
+    valCounts.forEach((count, val) => {
+      const lower = val.toLowerCase();
+      let variant: 'positive' | 'negative' | 'neutral' = 'neutral';
+      if (['yes', 'true', '1', 'active', 'valid', 'y', 'available', 'success'].includes(lower)) {
+        variant = 'positive';
+      } else if (['no', 'false', '0', 'inactive', 'invalid', 'n', 'unavailable', 'failed'].includes(lower)) {
+        variant = 'negative';
+      }
+
+      options.push({
+        value: val,
+        displayLabel: val,
+        count,
+        variant,
+      });
+    });
+
+    return {
+      fileType: rawKeys.length === 2 ? 'phone_with_status' : 'multi_column_dataset',
+      totalColumns: rawKeys.length,
+      columnNames: rawKeys,
+      phoneColumnName: phoneKey,
+      statusColumnName: candidateStatusKey,
+      statusOptions: options,
+      totalRows,
+    };
+  }
+
+  return {
+    fileType: rawKeys.length <= 1 ? 'single_column_phone' : 'multi_column_dataset',
+    totalColumns: rawKeys.length,
+    columnNames: rawKeys,
+    phoneColumnName: phoneKey,
+    statusOptions: [],
+    totalRows,
+  };
+}
+
 export function DropZone({ onFileParsed, isProcessing }: DropZoneProps) {
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<{
     name: string;
     size: string;
     rows: any[];
-    isSingleColumn?: boolean;
+    analysis: FileAnalysis;
   } | null>(null);
+
+  // Selected Scope Filter Option (e.g. 'ALL', 'Yes', 'No')
+  const [selectedFilterOption, setSelectedFilterOption] = useState<string>('ALL');
 
   // Multiple Tag Management State
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -58,7 +236,6 @@ export function DropZone({ onFileParsed, isProcessing }: DropZoneProps) {
   const handleAddCustomTag = () => {
     if (!newTagInput.trim()) return;
 
-    // Support comma-separated tags e.g. "VIP 2026, Gulshan Branch"
     const rawInputs = newTagInput
       .split(',')
       .map((t) => t.trim())
@@ -90,6 +267,26 @@ export function DropZone({ onFileParsed, isProcessing }: DropZoneProps) {
     setSelectedTags(selectedTags.filter((t) => t !== tagToRemove));
   };
 
+  const applyFileResult = (fileName: string, fileSizeStr: string, rows: any[]) => {
+    const analysis = analyzeDatasetFile(rows);
+    setSelectedFile({
+      name: fileName,
+      size: fileSizeStr,
+      rows,
+      analysis,
+    });
+    setSelectedFilterOption('ALL');
+
+    // Smart tag suggestions
+    const lowerName = fileName.toLowerCase();
+    const initialTags: string[] = [];
+    if (lowerName.includes('iphone')) initialTags.push('iPhone User');
+    if (lowerName.includes('whatsapp') || lowerName.includes('wa')) initialTags.push('WhatsApp Active');
+    if (lowerName.includes('viber')) initialTags.push('Viber Contact');
+    if (lowerName.includes('vip')) initialTags.push('VIP Client');
+    setSelectedTags(initialTags);
+  };
+
   const processFile = (file: File) => {
     setError(null);
     const fileName = file.name;
@@ -108,31 +305,7 @@ export function DropZone({ onFileParsed, isProcessing }: DropZoneProps) {
         skipEmptyLines: true,
         complete: (results) => {
           if (results.data && results.data.length > 0) {
-            const firstRowKeys = Object.keys((results.data[0] as any) || {});
-            const isSingle = firstRowKeys.length <= 2;
-            setSelectedFile({
-              name: fileName,
-              size: fileSizeStr,
-              rows: results.data,
-              isSingleColumn: isSingle,
-            });
-
-            // Smart tag suggestions from filename
-            const lowerName = fileName.toLowerCase();
-            const initialTags: string[] = [...selectedTags];
-            if (lowerName.includes('iphone') && !initialTags.includes('iPhone User')) {
-              initialTags.push('iPhone User');
-            }
-            if ((lowerName.includes('whatsapp') || lowerName.includes('wa')) && !initialTags.includes('WhatsApp Active')) {
-              initialTags.push('WhatsApp Active');
-            }
-            if (lowerName.includes('viber') && !initialTags.includes('Viber Contact')) {
-              initialTags.push('Viber Contact');
-            }
-            if (lowerName.includes('vip') && !initialTags.includes('VIP Client')) {
-              initialTags.push('VIP Client');
-            }
-            setSelectedTags(initialTags);
+            applyFileResult(fileName, fileSizeStr, results.data);
           } else {
             setError('The selected CSV file appears to be empty.');
           }
@@ -153,30 +326,7 @@ export function DropZone({ onFileParsed, isProcessing }: DropZoneProps) {
           const jsonRows = XLSX.utils.sheet_to_json(worksheet);
 
           if (jsonRows && jsonRows.length > 0) {
-            const firstRowKeys = Object.keys((jsonRows[0] as any) || {});
-            const isSingle = firstRowKeys.length <= 2;
-            setSelectedFile({
-              name: fileName,
-              size: fileSizeStr,
-              rows: jsonRows,
-              isSingleColumn: isSingle,
-            });
-
-            const lowerName = fileName.toLowerCase();
-            const initialTags: string[] = [...selectedTags];
-            if (lowerName.includes('iphone') && !initialTags.includes('iPhone User')) {
-              initialTags.push('iPhone User');
-            }
-            if ((lowerName.includes('whatsapp') || lowerName.includes('wa')) && !initialTags.includes('WhatsApp Active')) {
-              initialTags.push('WhatsApp Active');
-            }
-            if (lowerName.includes('viber') && !initialTags.includes('Viber Contact')) {
-              initialTags.push('Viber Contact');
-            }
-            if (lowerName.includes('vip') && !initialTags.includes('VIP Client')) {
-              initialTags.push('VIP Client');
-            }
-            setSelectedTags(initialTags);
+            applyFileResult(fileName, fileSizeStr, jsonRows);
           } else {
             setError('The selected Excel file contains no data rows.');
           }
@@ -213,9 +363,33 @@ export function DropZone({ onFileParsed, isProcessing }: DropZoneProps) {
     }
   };
 
+  // Compute records to upload based on chosen filter option
+  const getRecordsToUpload = () => {
+    if (!selectedFile) return [];
+    if (
+      selectedFilterOption === 'ALL' ||
+      !selectedFile.analysis.statusColumnName
+    ) {
+      return selectedFile.rows;
+    }
+
+    const col = selectedFile.analysis.statusColumnName;
+    return selectedFile.rows.filter((r) => {
+      const val = String(r[col] === null || r[col] === undefined ? '' : r[col]).trim();
+      return val.toLowerCase() === selectedFilterOption.toLowerCase();
+    });
+  };
+
+  const finalRowsToUpload = getRecordsToUpload();
+
   const handleUploadTrigger = () => {
     if (selectedFile) {
-      onFileParsed(selectedFile.name, selectedFile.rows, selectedFile.size, selectedTags);
+      const rowsToSubmit = finalRowsToUpload;
+      if (rowsToSubmit.length === 0) {
+        setError('No rows match the selected filter criteria.');
+        return;
+      }
+      onFileParsed(selectedFile.name, rowsToSubmit, selectedFile.size, selectedTags);
     }
   };
 
@@ -268,7 +442,7 @@ export function DropZone({ onFileParsed, isProcessing }: DropZoneProps) {
         </div>
       )}
 
-      {/* Selected File Card & Multi-Tag Manager */}
+      {/* Selected File Card & Analysis */}
       {selectedFile && (
         <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-gray-200/90 dark:border-slate-800 shadow-card space-y-5 animate-in fade-in">
           {/* File Header */}
@@ -281,13 +455,14 @@ export function DropZone({ onFileParsed, isProcessing }: DropZoneProps) {
                 <h4 className="text-sm font-bold text-gray-900 dark:text-white">
                   {selectedFile.name}
                 </h4>
-                <p className="text-xs text-gray-500 font-medium mt-0.5">
-                  {selectedFile.rows.length.toLocaleString()} rows detected &bull; {selectedFile.size}
-                  {selectedFile.isSingleColumn && (
-                    <span className="ml-2 px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 font-semibold text-[10px]">
-                      Single-Column Phone List
-                    </span>
-                  )}
+                <p className="text-xs text-gray-500 font-medium mt-0.5 flex items-center flex-wrap gap-2">
+                  <span>{selectedFile.rows.length.toLocaleString()} total rows</span>
+                  <span>&bull;</span>
+                  <span>{selectedFile.size}</span>
+                  <span>&bull;</span>
+                  <span className="font-semibold text-gray-700 dark:text-gray-300">
+                    {selectedFile.analysis.totalColumns} {selectedFile.analysis.totalColumns === 1 ? 'Column' : 'Columns'}
+                  </span>
                 </p>
               </div>
             </div>
@@ -296,7 +471,89 @@ export function DropZone({ onFileParsed, isProcessing }: DropZoneProps) {
             </span>
           </div>
 
-          {/* MULTI-TAG & BATCH LABEL MANAGER */}
+          {/* 1. SMART FILE STRUCTURE DETECTION BANNER */}
+          {selectedFile.analysis.fileType === 'single_column_phone' && (
+            <div className="p-4 rounded-2xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-900/60 flex items-start gap-3">
+              <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 shrink-0">
+                <Phone className="w-4 h-4" />
+              </div>
+              <div className="space-y-0.5 text-xs">
+                <h5 className="font-bold text-blue-900 dark:text-blue-100 flex items-center gap-1.5">
+                  Pure Phone Number List Detected
+                  <span className="px-2 py-0.5 rounded-full bg-blue-200/70 dark:bg-blue-800 text-blue-800 dark:text-blue-200 font-semibold text-[10px]">
+                    1 Column File
+                  </span>
+                </h5>
+                <p className="text-blue-700 dark:text-blue-300 text-[11px] leading-relaxed">
+                  All rows in this file contain phone numbers. They will be imported directly and merged into your active database.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* 2. SMART SCOPE / YES-NO FILTER SELECTOR (Appears when 2-column or status column is detected) */}
+          {selectedFile.analysis.statusColumnName && selectedFile.analysis.statusOptions.length > 1 && (
+            <div className="p-5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/60 space-y-3.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                <div>
+                  <h5 className="text-xs font-bold text-amber-950 dark:text-amber-100 flex items-center gap-1.5">
+                    <ListFilter className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                    Column Filter Detected: <span className="underline decoration-amber-400">&ldquo;{selectedFile.analysis.statusColumnName}&rdquo;</span>
+                  </h5>
+                  <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 mt-0.5">
+                    This file has a decision/status column. Choose which records you want to import:
+                  </p>
+                </div>
+
+                <span className="text-[11px] font-bold text-amber-900 dark:text-amber-200 px-2.5 py-1 rounded-lg bg-amber-100 dark:bg-amber-900/60 self-start sm:self-center">
+                  Importing: {finalRowsToUpload.length.toLocaleString()} of {selectedFile.rows.length.toLocaleString()} rows
+                </span>
+              </div>
+
+              {/* Filter Selector Pills */}
+              <div className="flex flex-wrap gap-2 pt-1">
+                {selectedFile.analysis.statusOptions.map((opt) => {
+                  const isSelected = selectedFilterOption.toLowerCase() === opt.value.toLowerCase();
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setSelectedFilterOption(opt.value)}
+                      className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all ${
+                        isSelected
+                          ? opt.variant === 'positive'
+                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-600/20 ring-2 ring-emerald-500/20'
+                            : opt.variant === 'negative'
+                            ? 'bg-rose-600 text-white border-rose-600 shadow-md shadow-rose-600/20 ring-2 ring-rose-500/20'
+                            : 'bg-brand-600 text-white border-brand-600 shadow-md shadow-brand-600/20 ring-2 ring-brand-500/20'
+                          : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-slate-700 hover:border-amber-400 hover:bg-amber-50/50 dark:hover:bg-slate-750'
+                      }`}
+                    >
+                      <span>
+                        {opt.value === 'ALL'
+                          ? '⚡ All Records'
+                          : opt.variant === 'positive'
+                          ? `🟢 Only '${opt.displayLabel}'`
+                          : opt.variant === 'negative'
+                          ? `🔴 Only '${opt.displayLabel}'`
+                          : `🏷️ ${opt.displayLabel}`}
+                      </span>
+                      <span
+                        className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono ${
+                          isSelected ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300'
+                        }`}
+                      >
+                        {opt.count.toLocaleString()}
+                      </span>
+                      {isSelected && <Check className="w-3.5 h-3.5" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 3. MULTI-TAG & BATCH LABEL MANAGER */}
           <div className="p-5 rounded-2xl bg-gradient-to-br from-brand-50/60 to-indigo-50/40 dark:from-brand-950/30 dark:to-indigo-950/20 border border-brand-200/80 dark:border-brand-900/60 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
@@ -305,7 +562,7 @@ export function DropZone({ onFileParsed, isProcessing }: DropZoneProps) {
                   Assign Batch Tags & Labels (Multi-Tag Selector)
                 </label>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                  Attach multiple tags to all numbers in this file. Select from presets or type custom tags with the <strong className="text-brand-600 dark:text-brand-400">+</strong> button.
+                  Attach labels to these records. Select presets or type custom tags with the <strong className="text-brand-600 dark:text-brand-400">+</strong> button.
                 </p>
               </div>
 
@@ -425,6 +682,7 @@ export function DropZone({ onFileParsed, isProcessing }: DropZoneProps) {
               onClick={() => {
                 setSelectedFile(null);
                 setSelectedTags([]);
+                setSelectedFilterOption('ALL');
                 setNewTagInput('');
                 if (inputRef.current) inputRef.current.value = '';
               }}
@@ -435,7 +693,7 @@ export function DropZone({ onFileParsed, isProcessing }: DropZoneProps) {
 
             <button
               onClick={handleUploadTrigger}
-              disabled={isProcessing}
+              disabled={isProcessing || finalRowsToUpload.length === 0}
               className="px-7 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-lg shadow-brand-600/25 flex items-center gap-2 transition-all hover:scale-105 active:scale-95 disabled:opacity-60 cursor-pointer"
             >
               {isProcessing ? (
@@ -444,7 +702,7 @@ export function DropZone({ onFileParsed, isProcessing }: DropZoneProps) {
                 </>
               ) : (
                 <>
-                  <UploadCloud className="w-4 h-4" /> Upload & Merge Dataset
+                  <UploadCloud className="w-4 h-4" /> Upload & Merge ({finalRowsToUpload.length.toLocaleString()} Records)
                   {selectedTags.length > 0 && (
                     <span className="px-2 py-0.5 rounded-full bg-white/20 text-[10px] font-semibold">
                       {selectedTags.length} {selectedTags.length === 1 ? 'Tag' : 'Tags'}
