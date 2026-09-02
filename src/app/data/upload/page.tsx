@@ -25,7 +25,12 @@ export default function UploadDataPage() {
 
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-  const handleFileParsed = async (filename: string, rows: any[], fileSize: string, customTag?: string) => {
+  const handleFileParsed = async (
+    filename: string,
+    rows: any[],
+    fileSize: string,
+    tags?: string[] | string
+  ) => {
     setUploadStage('uploading');
     setErrorMessage('');
     setCurrentStep(1); // Stage 1: Uploading
@@ -35,10 +40,22 @@ export default function UploadDataPage() {
     setCurrentStep(3); // Stage 3: Normalizing & Matching
 
     try {
+      const tagsArray = Array.isArray(tags)
+        ? tags
+        : typeof tags === 'string' && tags.trim()
+        ? tags.split(',').map((t) => t.trim()).filter(Boolean)
+        : [];
+
       const res = await fetch('/api/data/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename, rows, fileSize, customTag }),
+        body: JSON.stringify({
+          filename,
+          rows,
+          fileSize,
+          tags: tagsArray,
+          customTag: tagsArray[0] || '',
+        }),
       });
 
       await sleep(300);

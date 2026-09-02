@@ -21,6 +21,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Parse multiple batch tags & labels from upload payload
+    const rawBatchTags: string[] = [];
+    if (Array.isArray(body.tags)) {
+      body.tags.forEach((t: any) => {
+        const str = String(t || '').trim();
+        if (str && !rawBatchTags.includes(str)) rawBatchTags.push(str);
+      });
+    } else if (typeof body.tags === 'string' && body.tags.trim()) {
+      body.tags.split(',').forEach((t: string) => {
+        const str = t.trim();
+        if (str && !rawBatchTags.includes(str)) rawBatchTags.push(str);
+      });
+    }
+
+    if (customTag && typeof customTag === 'string' && customTag.trim()) {
+      customTag.split(',').forEach((t: string) => {
+        const str = t.trim();
+        if (str && !rawBatchTags.includes(str)) rawBatchTags.push(str);
+      });
+    }
+
     let validRecords: any[] = [];
     let skippedCount = 0;
 
@@ -164,19 +185,28 @@ export async function POST(request: NextRequest) {
           lowerKey === 'tag' ||
           lowerKey === 'tags' ||
           lowerKey === 'label' ||
-          lowerKey === 'category'
+          lowerKey === 'labels' ||
+          lowerKey === 'badge'
         ) {
-          const tVal = String(val || '').trim();
-          if (tVal) {
-            normalizedRow.tags.push(tVal);
-            normalizedRow.category = tVal;
+          const tagVal = String(val || '').trim();
+          if (tagVal) {
+            tagVal.split(',').forEach((t) => {
+              const ct = t.trim();
+              if (ct && !normalizedRow.tags.includes(ct)) normalizedRow.tags.push(ct);
+            });
           }
+        } else if (
+          lowerKey === 'category' ||
+          lowerKey === 'group' ||
+          lowerKey === 'segment'
+        ) {
+          normalizedRow.category = String(val || '').trim();
         } else {
           normalizedRow.customFields[key] = val;
         }
       });
 
-      // Single-column & raw number detector fallback
+      // Single column auto-detection
       if (!normalizedRow.phone) {
         for (const v of values) {
           const cleanStr = String(v).replace(/[\s\+\-\(\)]/g, '');
@@ -187,16 +217,17 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Apply batch custom tag and category
-      if (customTag && typeof customTag === 'string' && customTag.trim()) {
-        const cleanTag = customTag.trim();
-        if (!normalizedRow.tags.includes(cleanTag)) {
-          normalizedRow.tags.push(cleanTag);
-        }
+      // Apply batch custom tags and category
+      if (rawBatchTags.length > 0) {
+        rawBatchTags.forEach((tag) => {
+          if (!normalizedRow.tags.includes(tag)) {
+            normalizedRow.tags.push(tag);
+          }
+        });
         if (!normalizedRow.category) {
-          normalizedRow.category = customCategory ? customCategory.trim() : cleanTag;
+          normalizedRow.category = customCategory ? customCategory.trim() : rawBatchTags[0];
         }
-        normalizedRow.customFields['Tag / Label'] = cleanTag;
+        normalizedRow.customFields['Tags / Labels'] = normalizedRow.tags.join(', ');
       }
       if (customAttributes && typeof customAttributes === 'object') {
         Object.assign(normalizedRow.customFields, customAttributes);
