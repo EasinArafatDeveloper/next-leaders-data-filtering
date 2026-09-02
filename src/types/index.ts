@@ -13,6 +13,8 @@ export interface IRecord {
   activeDays: number;
   avatarType?: 'With Avatar' | 'Without Avatar' | 'Custom' | 'Initial' | string;
   avatarUrl?: string;
+  avatarBase64?: string;
+  avatarOriginalUrl?: string;
   tags?: string[];
   category?: string;
   customFields?: Record<string, any>;

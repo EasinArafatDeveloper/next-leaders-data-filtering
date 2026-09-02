@@ -133,6 +133,7 @@ export async function POST(request: NextRequest) {
           const avatarVal = String(val || '').trim();
           if (avatarVal.startsWith('http://') || avatarVal.startsWith('https://')) {
             normalizedRow.avatarUrl = avatarVal;
+            normalizedRow.avatarOriginalUrl = avatarVal;
             normalizedRow.avatarType = 'With Avatar';
           } else if (avatarVal) {
             normalizedRow.avatarType = avatarVal;

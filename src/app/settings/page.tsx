@@ -45,10 +45,81 @@ export default function SettingsPage() {
   const [showNew, setShowNew] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
+  const [archiveStats, setArchiveStats] = useState<{
+    totalWithAvatar: number;
+    permanentlyArchived: number;
+    pending: number;
+    percentage: number;
+    isFullyArchived: boolean;
+  } | null>(null);
+  const [isArchiving, setIsArchiving] = useState(false);
+  const [archiveProgressText, setArchiveProgressText] = useState('');
+
+  // Fetch avatar archive stats when dataset section is opened
+  React.useEffect(() => {
+    if (activeSection === 'dataset') {
+      fetch('/api/data/archive-avatars')
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data) setArchiveStats(data);
+        })
+        .catch(() => {});
+    }
+  }, [activeSection]);
+
+  const handleArchiveAllAvatars = async () => {
+    setIsArchiving(true);
+    setArchiveProgressText('Connecting to image archiver...');
+    try {
+      let isDone = false;
+      let totalArchived = 0;
+
+      while (!isDone) {
+        const res = await fetch('/api/data/archive-avatars?limit=80', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Archiving failed');
+
+        totalArchived += data.archivedInThisBatch || 0;
+        setArchiveProgressText(
+          `Archiving avatars... ${totalArchived} saved (${data.remainingPending} remaining)`
+        );
+
+        if (data.isComplete || data.archivedInThisBatch === 0 || data.remainingPending === 0) {
+          isDone = true;
+          break;
+        }
+
+        // Refresh stats
+        const statsRes = await fetch('/api/data/archive-avatars');
+        if (statsRes.ok) {
+          const s = await statsRes.json();
+          setArchiveStats(s);
+        }
+      }
+
+      toast.success('All avatar photos are now permanently archived in MongoDB!');
+      setNotification({
+        type: 'success',
+        msg: 'All avatar photos have been converted to permanent database storage. Broken links are now 100% protected!',
+      });
+    } catch (err: any) {
+      toast.error(err.message || 'Archiving process failed');
+    } finally {
+      setIsArchiving(false);
+      setArchiveProgressText('');
+      fetch('/api/data/archive-avatars')
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data) setArchiveStats(data);
+        })
+        .catch(() => {});
+    }
+  };
+
   const sections = [
     { id: 'profile' as SettingsSection, label: 'Profile', icon: User },
     { id: 'security' as SettingsSection, label: 'Security & Password', icon: Shield },
-    { id: 'dataset' as SettingsSection, label: 'Dataset', icon: Database },
+    { id: 'dataset' as SettingsSection, label: 'Dataset & Storage', icon: Database },
     { id: 'export' as SettingsSection, label: 'Export', icon: Download },
     { id: 'system' as SettingsSection, label: 'System', icon: Monitor },
   ];
@@ -398,7 +469,96 @@ export default function SettingsPage() {
 
           {/* Dataset Management Section */}
           {activeSection === 'dataset' && (
-            <div className="space-y-4">
+            <div className="space-y-5">
+              {/* Permanent Avatar Archiver & Local Backup Card */}
+              <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-50/70 to-brand-50/50 dark:from-slate-900 dark:to-indigo-950/20 border border-brand-200/80 dark:border-brand-900/60 shadow-card space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-brand-600 dark:text-brand-400" />
+                      Permanent Database Avatar Storage & Archiver
+                    </h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Converts all external avatar links (Viber/WhatsApp CDN) into permanent Base64 binary storage inside your MongoDB database. Even if the original source link expires or is deleted, your images remain 100% safe forever!
+                    </p>
+                  </div>
+
+                  {archiveStats && (
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-bold border self-start sm:self-center shrink-0 ${
+                        archiveStats.isFullyArchived
+                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                          : 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                      }`}
+                    >
+                      {archiveStats.isFullyArchived
+                        ? '✓ 100% Protected'
+                        : `${archiveStats.percentage}% Archived`}
+                    </span>
+                  )}
+                </div>
+
+                {/* Progress & Stat Metrics */}
+                {archiveStats && (
+                  <div className="space-y-2">
+                    <div className="w-full h-2.5 rounded-full bg-gray-200 dark:bg-slate-800 overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-brand-600 to-indigo-500 transition-all duration-500 rounded-full"
+                        style={{ width: `${Math.max(5, archiveStats.percentage)}%` }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] text-gray-500 font-medium">
+                      <span>
+                        Permanently Saved:{' '}
+                        <strong className="text-brand-600 dark:text-brand-400 font-bold">
+                          {archiveStats.permanentlyArchived.toLocaleString()}
+                        </strong>{' '}
+                        of {archiveStats.totalWithAvatar.toLocaleString()} images
+                      </span>
+                      <span>
+                        Pending:{' '}
+                        <strong className="text-amber-600 dark:text-amber-400 font-bold">
+                          {archiveStats.pending.toLocaleString()}
+                        </strong>
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {archiveProgressText && (
+                  <div className="p-3 rounded-xl bg-brand-100/60 dark:bg-brand-950/50 text-brand-800 dark:text-brand-200 text-xs font-semibold flex items-center gap-2">
+                    <div className="w-3.5 h-3.5 border-2 border-brand-600 border-t-transparent rounded-full animate-spin shrink-0" />
+                    <span>{archiveProgressText}</span>
+                  </div>
+                )}
+
+                <div className="pt-1 flex items-center gap-3 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={handleArchiveAllAvatars}
+                    disabled={isArchiving || (archiveStats ? archiveStats.isFullyArchived : false)}
+                    className="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white text-xs font-bold shadow-md shadow-brand-600/20 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+                  >
+                    {isArchiving ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Archiving Images into Database...</span>
+                      </>
+                    ) : archiveStats?.isFullyArchived ? (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 text-white" />
+                        <span>All Avatars Permanently Archived (100%)</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>Archive & Save All Avatars to MongoDB</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
               {/* Seed Demo Dataset Card */}
               <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-card space-y-4">
                 <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">

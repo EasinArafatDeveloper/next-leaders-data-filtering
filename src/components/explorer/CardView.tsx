@@ -36,7 +36,12 @@ const STATUS_BADGES: Record<string, { bg: string; text: string; dot: string }> =
 
 function UserAvatar({ record }: { record: IRecord }) {
   const [imgError, setImgError] = useState(false);
-  const avatarUrl = record.avatarUrl || (record.avatarType?.startsWith('http') ? record.avatarType : '');
+  const avatarUrl =
+    (record.avatarBase64 && record.avatarBase64.startsWith('data:image/'))
+      ? record.avatarBase64
+      : record._id
+      ? `/api/avatar/${record._id}`
+      : record.avatarUrl || (record.avatarType?.startsWith('http') ? record.avatarType : '');
 
   const initials = record.name
     ? record.name
