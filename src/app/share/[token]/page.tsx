@@ -256,17 +256,17 @@ export default function SecureSharePage({ params }: { params: { token: string } 
     });
   }, [shareData, searchTerm]);
 
-  // Loading Screen
+  // Loading Screen (White Theme)
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 text-white select-none">
-        <div className="p-4 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl flex flex-col items-center gap-4 text-center max-w-sm">
-          <div className="w-12 h-12 rounded-2xl bg-brand-600/20 text-brand-400 flex items-center justify-center animate-pulse">
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 text-slate-800 select-none">
+        <div className="p-6 rounded-3xl bg-white border border-gray-200 shadow-xl flex flex-col items-center gap-4 text-center max-w-sm">
+          <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center animate-pulse shadow-inner">
             <Lock className="w-6 h-6 animate-spin" />
           </div>
           <div>
-            <h3 className="font-bold text-base">Decrypting Secure Share View...</h3>
-            <p className="text-xs text-slate-400 mt-1">
+            <h3 className="font-bold text-base text-gray-900">Decrypting Secure Share View...</h3>
+            <p className="text-xs text-gray-500 mt-1">
               Verifying token authenticity and access permissions
             </p>
           </div>
@@ -275,13 +275,13 @@ export default function SecureSharePage({ params }: { params: { token: string } 
     );
   }
 
-  // Error / Burned / Expired Screen
+  // Error / Burned / Expired Screen (White Theme)
   if (errorInfo) {
     const isBurned = errorInfo.statusType === 'BURNED';
     const isExpired = errorInfo.statusType === 'EXPIRED';
 
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 select-none">
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 select-none font-sans">
         {/* Anti-print CSS */}
         <style jsx global>{`
           @media print {
@@ -294,38 +294,38 @@ export default function SecureSharePage({ params }: { params: { token: string } 
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-md p-6 sm:p-8 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-2xl text-center space-y-5 backdrop-blur-xl"
+          className="w-full max-w-md p-6 sm:p-8 rounded-3xl bg-white border border-gray-200 shadow-2xl text-center space-y-5"
         >
           <div
-            className={`w-16 h-16 rounded-3xl mx-auto flex items-center justify-center shadow-lg ${
+            className={`w-16 h-16 rounded-3xl mx-auto flex items-center justify-center shadow-md ${
               isBurned
-                ? 'bg-rose-500/20 text-rose-500 border border-rose-500/30'
+                ? 'bg-rose-50 text-rose-600 border border-rose-200'
                 : isExpired
-                ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30'
-                : 'bg-slate-800 text-slate-400'
+                ? 'bg-amber-50 text-amber-600 border border-amber-200'
+                : 'bg-gray-100 text-gray-500'
             }`}
           >
             {isBurned ? (
-              <Flame className="w-8 h-8 animate-bounce" />
+              <Flame className="w-8 h-8 animate-bounce text-rose-600" />
             ) : isExpired ? (
-              <Clock className="w-8 h-8" />
+              <Clock className="w-8 h-8 text-amber-600" />
             ) : (
-              <ShieldAlert className="w-8 h-8" />
+              <ShieldAlert className="w-8 h-8 text-gray-600" />
             )}
           </div>
 
           <div className="space-y-2">
             <span
-              className={`inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+              className={`inline-block px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
                 isBurned
-                  ? 'bg-rose-950 text-rose-400 border border-rose-800'
-                  : 'bg-amber-950 text-amber-400 border border-amber-800'
+                  ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                  : 'bg-amber-100 text-amber-800 border border-amber-200'
               }`}
             >
               {isBurned ? 'Link Burned • Self-Destructed' : 'Link Expired'}
             </span>
 
-            <h2 className="text-xl font-black text-white">
+            <h2 className="text-xl font-extrabold text-gray-900">
               {isBurned
                 ? 'This Link Has Been Burned'
                 : isExpired
@@ -333,14 +333,14 @@ export default function SecureSharePage({ params }: { params: { token: string } 
                 : 'Access Unavailable'}
             </h2>
 
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <p className="text-xs text-gray-600 leading-relaxed">
               {errorInfo.message}
             </p>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 text-[11px] text-slate-400 text-left space-y-1">
-            <div className="font-bold text-slate-300 flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Security Protocol Explanation:
+          <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-200 text-[11px] text-gray-600 text-left space-y-1">
+            <div className="font-bold text-gray-800 flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Security Protocol Explanation:
             </div>
             <p>
               This snapshot was shared using <strong>One-Time Burn Protection</strong>. To prevent unauthorized redistribution or data harvesting, records are permanently erased from memory after the first viewing session.
@@ -351,22 +351,22 @@ export default function SecureSharePage({ params }: { params: { token: string } 
     );
   }
 
-  // Passcode Prompt Screen
+  // Passcode Prompt Screen (White Theme)
   if (requiresPasscode) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 select-none">
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 select-none font-sans">
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-sm p-6 sm:p-8 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl text-center space-y-5"
+          className="w-full max-w-sm p-6 sm:p-8 rounded-3xl bg-white border border-gray-200 shadow-2xl text-center space-y-5"
         >
-          <div className="w-14 h-14 rounded-2xl bg-brand-500/20 text-brand-400 border border-brand-500/30 flex items-center justify-center mx-auto shadow-inner">
+          <div className="w-14 h-14 rounded-2xl bg-brand-50 text-brand-600 border border-brand-200 flex items-center justify-center mx-auto shadow-inner">
             <KeyRound className="w-7 h-7" />
           </div>
 
           <div>
-            <h2 className="text-lg font-black text-white">Passcode Protected View</h2>
-            <p className="text-xs text-slate-400 mt-1">
+            <h2 className="text-lg font-extrabold text-gray-900">Passcode Protected View</h2>
+            <p className="text-xs text-gray-500 mt-1">
               Enter the secret PIN or passcode provided by the sender to unlock this data.
             </p>
           </div>
@@ -381,24 +381,24 @@ export default function SecureSharePage({ params }: { params: { token: string } 
                   setPasscodeError('');
                 }}
                 placeholder="Enter secret passcode..."
-                className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-2xl text-center font-mono text-base text-white tracking-widest placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-inner"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-2xl text-center font-mono text-base text-gray-900 tracking-widest placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-inner"
                 autoFocus
               />
               {passcodeError && (
-                <p className="text-xs text-rose-400 mt-1.5 font-medium">{passcodeError}</p>
+                <p className="text-xs text-rose-600 mt-1.5 font-medium">{passcodeError}</p>
               )}
             </div>
 
             <button
               type="submit"
               disabled={isUnlocking}
-              className="w-full py-3 rounded-2xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-brand-600/30 transition-all active:scale-[0.98] disabled:opacity-50"
+              className="w-full py-3 rounded-2xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-brand-600/20 transition-all active:scale-[0.98] disabled:opacity-50"
             >
               {isUnlocking ? 'Unlocking Records...' : 'Unlock & View Data'}
             </button>
           </form>
 
-          <p className="text-[10px] text-slate-500">
+          <p className="text-[10px] text-gray-400 font-medium">
             🔒 Protected with 256-bit cryptographic verification
           </p>
         </motion.div>
@@ -409,14 +409,14 @@ export default function SecureSharePage({ params }: { params: { token: string } 
   if (!shareData) return null;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col select-none relative overflow-x-hidden font-sans">
-      {/* Dynamic diagonal watermark pattern across entire page */}
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col select-none relative overflow-x-hidden font-sans">
+      {/* Dynamic diagonal watermark pattern across entire page in light theme */}
       <div
-        className="pointer-events-none fixed inset-0 z-10 opacity-[0.035] flex flex-wrap items-center justify-center gap-24 p-12 overflow-hidden rotate-[-25deg] select-none"
+        className="pointer-events-none fixed inset-0 z-10 opacity-[0.045] flex flex-wrap items-center justify-center gap-24 p-12 overflow-hidden rotate-[-25deg] select-none text-slate-900"
         aria-hidden="true"
       >
         {Array.from({ length: 48 }).map((_, i) => (
-          <span key={i} className="text-sm font-black tracking-widest text-white whitespace-nowrap">
+          <span key={i} className="text-sm font-black tracking-widest whitespace-nowrap">
             {shareData.sessionWatermark}
           </span>
         ))}
@@ -429,17 +429,17 @@ export default function SecureSharePage({ params }: { params: { token: string } 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-2xl flex flex-col items-center justify-center p-6 text-center select-none"
+            className="fixed inset-0 z-50 bg-white/90 backdrop-blur-2xl flex flex-col items-center justify-center p-6 text-center select-none"
           >
-            <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl max-w-md space-y-4">
-              <div className="w-14 h-14 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center mx-auto">
+            <div className="p-6 rounded-3xl bg-white border border-gray-200 shadow-2xl max-w-md space-y-4">
+              <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto">
                 <EyeOff className="w-7 h-7" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white">
+                <h3 className="text-lg font-bold text-gray-900">
                   {isDevToolsDetected ? 'Developer Tools Detected' : 'Content Hidden (Privacy Guard)'}
                 </h3>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-gray-500 mt-1">
                   {isDevToolsDetected
                     ? 'Please close your browser developer tools to view this confidential data.'
                     : 'Click back inside this window to resume viewing.'}
@@ -465,35 +465,35 @@ export default function SecureSharePage({ params }: { params: { token: string } 
         }
       `}</style>
 
-      {/* Top Header Bar */}
-      <header className="sticky top-0 z-30 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 shadow-md">
+      {/* Top Header Bar (White Theme) */}
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-600 text-white shadow-md">
+            <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-600 text-white shadow-md shadow-brand-600/20">
               <Lock className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-base font-extrabold text-white tracking-tight">
+                <h1 className="text-base font-extrabold text-gray-900 tracking-tight">
                   {shareData.title}
                 </h1>
                 {shareData.isOneTime && (
-                  <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[10px] font-black uppercase flex items-center gap-1">
-                    <Flame className="w-3 h-3 text-rose-500" /> One-Time View
+                  <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-black uppercase flex items-center gap-1 shadow-xs">
+                    <Flame className="w-3 h-3 text-rose-600" /> One-Time View
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
-                <span>Shared by: <strong className="text-slate-300">{shareData.createdBy}</strong></span>
+              <p className="text-xs text-gray-500 flex items-center gap-2 mt-0.5">
+                <span>Shared by: <strong className="text-gray-700 font-semibold">{shareData.createdBy}</strong></span>
                 <span>•</span>
-                <span>Total: <strong className="text-emerald-400">{shareData.recordCount.toLocaleString()} Contacts</strong></span>
+                <span>Total: <strong className="text-emerald-700 font-bold">{shareData.recordCount.toLocaleString()} Contacts</strong></span>
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="px-3 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700/80 text-[11px] text-slate-300 flex items-center gap-1.5 font-mono">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <div className="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-800 flex items-center gap-1.5 font-medium shadow-xs">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
               <span>Anti-Leak Shield Active</span>
             </div>
           </div>
@@ -503,10 +503,10 @@ export default function SecureSharePage({ params }: { params: { token: string } 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-4 z-20">
         {/* Notice Banner */}
-        <div className="p-3.5 rounded-2xl bg-brand-950/40 border border-brand-900/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+        <div className="p-3.5 rounded-2xl bg-brand-50/90 border border-brand-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs">
           <div className="flex items-center gap-2.5">
-            <Sparkles className="w-4 h-4 text-brand-400 shrink-0" />
-            <span className="text-slate-300">
+            <Sparkles className="w-4 h-4 text-brand-600 shrink-0" />
+            <span className="text-brand-950 font-medium">
               {shareData.isOneTime
                 ? '🔥 This snapshot will permanently self-destruct once you leave or reload this page.'
                 : '🔒 You are viewing a confidential snapshot of filtered contacts.'}
@@ -515,23 +515,23 @@ export default function SecureSharePage({ params }: { params: { token: string } 
 
           {/* Local Search Input */}
           <div className="relative w-full sm:w-64">
-            <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-2.5" />
+            <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-2.5" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search in shared records..."
-              className="w-full pl-8 pr-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full pl-8 pr-3 py-1.5 bg-white border border-gray-300 rounded-xl text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-xs"
             />
           </div>
         </div>
 
-        {/* Records Table View */}
-        <div className="rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl overflow-hidden">
+        {/* Records Table View (White Theme) */}
+        <div className="rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 uppercase tracking-wider text-[10px] font-bold">
+                <tr className="border-b border-gray-200 bg-gray-50/90 text-gray-600 uppercase tracking-wider text-[10px] font-bold">
                   <th className="py-3 px-4">#</th>
                   <th className="py-3 px-4">Contact</th>
                   <th className="py-3 px-4">Phone Number</th>
@@ -541,10 +541,10 @@ export default function SecureSharePage({ params }: { params: { token: string } 
                   <th className="py-3 px-4">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-gray-100">
                 {filteredRecords.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-slate-500 text-xs">
+                    <td colSpan={7} className="py-8 text-center text-gray-400 text-xs font-medium">
                       No records match your search inside this shared view.
                     </td>
                   </tr>
@@ -553,10 +553,10 @@ export default function SecureSharePage({ params }: { params: { token: string } 
                     return (
                       <tr
                         key={index}
-                        className="hover:bg-slate-800/40 transition-colors"
+                        className="hover:bg-slate-50/80 transition-colors"
                       >
                         {/* Index */}
-                        <td className="py-3 px-4 text-slate-500 font-mono text-[11px]">
+                        <td className="py-3 px-4 text-gray-400 font-mono text-[11px]">
                           {index + 1}
                         </td>
 
@@ -567,20 +567,20 @@ export default function SecureSharePage({ params }: { params: { token: string } 
                               <img
                                 src={record.avatarUrl}
                                 alt=""
-                                className="w-8 h-8 rounded-full object-cover border border-slate-700 shrink-0"
+                                className="w-8 h-8 rounded-full object-cover border border-gray-200 shrink-0 shadow-xs"
                               />
                             ) : (
-                              <div className="w-8 h-8 rounded-full bg-brand-900/60 text-brand-300 font-bold flex items-center justify-center text-xs shrink-0">
+                              <div className="w-8 h-8 rounded-full bg-brand-50 text-brand-700 font-bold flex items-center justify-center text-xs shrink-0 border border-brand-200">
                                 {record.name?.[0] || 'U'}
                               </div>
                             )}
                             <div>
-                              <div className="font-bold text-slate-100 text-xs">
+                              <div className="font-bold text-gray-900 text-xs">
                                 {record.name || 'Unnamed Contact'}
                               </div>
                               {record.email && (
-                                <div className="text-[11px] text-slate-400 flex items-center gap-1">
-                                  <Mail className="w-3 h-3" /> {record.email}
+                                <div className="text-[11px] text-gray-500 flex items-center gap-1">
+                                  <Mail className="w-3 h-3 text-gray-400" /> {record.email}
                                 </div>
                               )}
                             </div>
@@ -588,9 +588,9 @@ export default function SecureSharePage({ params }: { params: { token: string } 
                         </td>
 
                         {/* Phone */}
-                        <td className="py-3 px-4 font-mono font-bold text-emerald-400">
+                        <td className="py-3 px-4 font-mono font-bold text-emerald-700">
                           <div className="flex items-center gap-1.5">
-                            <Phone className="w-3.5 h-3.5 text-slate-500" />
+                            <Phone className="w-3.5 h-3.5 text-gray-400" />
                             <span>{record.phone}</span>
                           </div>
                         </td>
@@ -602,38 +602,38 @@ export default function SecureSharePage({ params }: { params: { token: string } 
                               record.tags.map((t) => (
                                 <span
                                   key={t}
-                                  className="px-2 py-0.5 rounded-md bg-purple-950/80 text-purple-300 border border-purple-800 text-[10px] font-semibold"
+                                  className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-semibold"
                                 >
                                   {t}
                                 </span>
                               ))
                             ) : record.category ? (
-                              <span className="px-2 py-0.5 rounded-md bg-purple-950/80 text-purple-300 border border-purple-800 text-[10px] font-semibold">
+                              <span className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-semibold">
                                 {record.category}
                               </span>
                             ) : (
-                              <span className="text-slate-600 text-[11px]">–</span>
+                              <span className="text-gray-300 text-[11px]">–</span>
                             )}
                           </div>
                         </td>
 
                         {/* Location */}
-                        <td className="py-3 px-4 text-slate-300">
+                        <td className="py-3 px-4 text-gray-700">
                           {record.location ? (
                             <div className="flex items-center gap-1">
-                              <MapPin className="w-3 h-3 text-slate-500" />
+                              <MapPin className="w-3 h-3 text-gray-400" />
                               <span>{record.location}</span>
-                              {record.area && <span className="text-slate-500">({record.area})</span>}
+                              {record.area && <span className="text-gray-400">({record.area})</span>}
                             </div>
                           ) : (
-                            <span className="text-slate-600">–</span>
+                            <span className="text-gray-300">–</span>
                           )}
                         </td>
 
                         {/* Demographics */}
-                        <td className="py-3 px-4 text-slate-300">
+                        <td className="py-3 px-4 text-gray-700">
                           <span>{record.gender || '–'}</span>
-                          {record.age ? <span className="text-slate-500 ml-1">({record.age}y)</span> : null}
+                          {record.age ? <span className="text-gray-400 ml-1">({record.age}y)</span> : null}
                         </td>
 
                         {/* Status */}
@@ -641,8 +641,8 @@ export default function SecureSharePage({ params }: { params: { token: string } 
                           <span
                             className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                               record.status === 'Active'
-                                ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
-                                : 'bg-slate-800 text-slate-400'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-gray-100 text-gray-600 border border-gray-200'
                             }`}
                           >
                             {record.status || 'Active'}
@@ -659,7 +659,7 @@ export default function SecureSharePage({ params }: { params: { token: string } 
       </main>
 
       {/* Footer */}
-      <footer className="mt-auto py-4 border-t border-slate-800/80 text-center text-slate-500 text-xs">
+      <footer className="mt-auto py-4 border-t border-gray-200 text-center text-gray-500 text-xs bg-white/80">
         DataFlow Confidential Sharing Engine • Protected by Single-Use Burn & Watermark Safeguards
       </footer>
     </div>
