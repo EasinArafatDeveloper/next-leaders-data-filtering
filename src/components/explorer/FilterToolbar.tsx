@@ -18,6 +18,8 @@ import {
   FileSpreadsheet,
   FolderOpen,
   Tag,
+  Lock,
+  Share2,
 } from 'lucide-react';
 import { FilterQueryState, IDatasetSummary } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -27,6 +29,7 @@ interface FilterToolbarProps {
   onApplyFilters: (updated: Partial<FilterQueryState>) => void;
   onResetFilters: () => void;
   onExportCSV: () => void;
+  onShareLink?: () => void;
   isExporting?: boolean;
   viewMode: 'cards' | 'table';
   onViewModeChange: (mode: 'cards' | 'table') => void;
@@ -63,6 +66,7 @@ export function FilterToolbar({
   onApplyFilters,
   onResetFilters,
   onExportCSV,
+  onShareLink,
   isExporting,
   viewMode,
   onViewModeChange,
@@ -237,6 +241,22 @@ export function FilterToolbar({
                 </span>
               )}
             </button>
+
+            {/* Secure One-Time Share View Button */}
+            {onShareLink && (
+              <button
+                type="button"
+                onClick={onShareLink}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md shadow-brand-600/20 transition-all active:scale-[0.98] whitespace-nowrap"
+                title="Generate a secure one-time link with anti-screenshot protection"
+              >
+                <Lock className="w-3.5 h-3.5 text-brand-200" />
+                <span>Share View</span>
+                <span className="px-1.5 py-0.5 rounded-md bg-white/20 text-[10px] font-extrabold text-white">
+                  🔥 1-Time
+                </span>
+              </button>
+            )}
           </div>
         </div>
 

@@ -8,6 +8,7 @@ import { ActiveFilterChips } from '@/components/explorer/ActiveFilterChips';
 import { CardView } from '@/components/explorer/CardView';
 import { TableView } from '@/components/explorer/TableView';
 import { RecordDetailDrawer } from '@/components/explorer/RecordDetailDrawer';
+import { ShareLinkModal } from '@/components/explorer/ShareLinkModal';
 import { Pagination } from '@/components/explorer/Pagination';
 import { FilterQueryState, IRecord, PaginationResponse } from '@/types';
 import { LayoutGrid, Table2, Database, Bookmark, X } from 'lucide-react';
@@ -49,6 +50,7 @@ export default function DataExplorerPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [selectedRecord, setSelectedRecord] = useState<IRecord | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [filterName, setFilterName] = useState('');
   const [isSavingFilter, setIsSavingFilter] = useState(false);
@@ -321,6 +323,7 @@ export default function DataExplorerPage() {
         onApplyFilters={handleApplyFilters}
         onResetFilters={handleResetFilters}
         onExportCSV={handleExportCSV}
+        onShareLink={() => setIsShareModalOpen(true)}
         isExporting={isExporting}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
@@ -396,6 +399,14 @@ export default function DataExplorerPage() {
           onClose={() => setSelectedRecord(null)}
         />
       )}
+
+      {/* Secure One-Time Share Link Modal */}
+      <ShareLinkModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        filters={filters}
+        totalFilteredCount={filteredRecords}
+      />
 
       {/* Save Filter Name Modal */}
       <AnimatePresence>
