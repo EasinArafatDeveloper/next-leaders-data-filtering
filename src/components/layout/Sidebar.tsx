@@ -74,20 +74,26 @@ export function Sidebar({
       >
         <Link
           href="/dashboard"
-          className="flex items-center group py-1 overflow-hidden"
+          className="flex items-center group py-1 max-w-[170px] max-h-10 overflow-hidden"
           title={collapsed ? 'DATAFLOW Platform' : undefined}
         >
           {collapsed ? (
             <img
               src="/Logo_Next_new.png"
               alt="Logo"
-              className="h-8 w-8 object-contain rounded-lg"
+              width={32}
+              height={32}
+              style={{ width: '32px', height: '32px', maxWidth: '32px', maxHeight: '32px', objectFit: 'contain' }}
+              className="h-8 w-8 object-contain rounded-lg shrink-0"
             />
           ) : (
             <img
               src="/Logo_Next_new.png"
               alt="Logo"
-              className="h-8 w-auto max-w-[160px] object-contain group-hover:opacity-90 transition-opacity"
+              width={160}
+              height={32}
+              style={{ height: '32px', maxHeight: '32px', maxWidth: '160px', width: 'auto', objectFit: 'contain' }}
+              className="h-8 w-auto max-w-[160px] object-contain group-hover:opacity-90 transition-opacity shrink-0"
             />
           )}
         </Link>

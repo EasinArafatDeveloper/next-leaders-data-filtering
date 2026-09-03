@@ -35,6 +35,11 @@
     box-sizing: border-box;
   }
 
+  img, svg {
+    max-width: 100%;
+    display: inline-block;
+  }
+
   body {
     background-color: var(--bg-main);
     color: var(--text-primary);

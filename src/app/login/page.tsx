@@ -100,7 +100,10 @@ function LoginFormContent() {
               <img
                 src="/Logo_Next_new.png"
                 alt="Logo"
-                className="h-10 w-auto object-contain drop-shadow-sm"
+                width={180}
+                height={40}
+                style={{ height: '40px', maxHeight: '40px', maxWidth: '180px', width: 'auto', objectFit: 'contain' }}
+                className="h-10 w-auto object-contain drop-shadow-sm shrink-0"
               />
             </div>
             <div>
