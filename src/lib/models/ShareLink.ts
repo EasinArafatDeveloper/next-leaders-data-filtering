@@ -27,6 +27,8 @@ export interface IShareLinkDocument extends Document {
   expiresAt: Date;
   passcodeHash?: string;
   hasPasscode: boolean;
+  failedPasscodeAttempts: number;
+  maxPasscodeAttempts: number;
   domainUsed?: string;
   createdBy: string;
   accessLogs: Array<{
@@ -51,6 +53,8 @@ const ShareLinkSchema: Schema = new Schema(
     expiresAt: { type: Date, required: true },
     passcodeHash: { type: String, default: '' },
     hasPasscode: { type: Boolean, default: false },
+    failedPasscodeAttempts: { type: Number, default: 0 },
+    maxPasscodeAttempts: { type: Number, default: 3 },
     domainUsed: { type: String, default: '' },
     createdBy: { type: String, default: 'Administrator' },
     accessLogs: [

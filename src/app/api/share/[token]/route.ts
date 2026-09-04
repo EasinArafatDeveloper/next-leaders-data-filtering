@@ -163,7 +163,7 @@ export async function POST(
       );
     }
 
-    // Verify Passcode
+    // Verify Passcode with 3-Attempt Auto-Lock / Self-Destruct Protection
     if (shareLink.hasPasscode) {
       if (!passcode) {
         return NextResponse.json(
@@ -177,11 +177,38 @@ export async function POST(
         .digest('hex');
 
       if (hashedInput !== shareLink.passcodeHash) {
+        const attempts = (shareLink.failedPasscodeAttempts || 0) + 1;
+        shareLink.failedPasscodeAttempts = attempts;
+        const maxAttempts = shareLink.maxPasscodeAttempts || 3;
+
+        if (attempts >= maxAttempts) {
+          shareLink.isBurned = true;
+          await shareLink.save();
+          return NextResponse.json(
+            {
+              error: `Maximum failed passcode attempts (${maxAttempts}/${maxAttempts}) reached. This link has self-destructed and been permanently burned.`,
+              statusType: 'BURNED',
+              isBurned: true,
+              remainingAttempts: 0,
+            },
+            { status: 410 }
+          );
+        }
+
+        await shareLink.save();
+        const remaining = maxAttempts - attempts;
         return NextResponse.json(
-          { error: 'Incorrect passcode. Access denied.' },
+          {
+            error: `Incorrect passcode. ${remaining} attempt(s) remaining before this link self-destructs!`,
+            statusType: 'INVALID_PASSCODE',
+            remainingAttempts: remaining,
+          },
           { status: 401 }
         );
       }
+
+      // Successful passcode unlock -> reset failed attempts
+      shareLink.failedPasscodeAttempts = 0;
     }
 
     // Passcode validated -> consume view

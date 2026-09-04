@@ -371,6 +371,11 @@ export default function SecureSharePage({ params }: { params: { token: string } 
             </p>
           </div>
 
+          <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 font-semibold flex items-center justify-center gap-1.5 shadow-xs">
+            <Flame className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+            <span>Anti-Brute Force: 3 wrong attempts will permanently burn this link.</span>
+          </div>
+
           <form onSubmit={handleUnlockPasscode} className="space-y-4">
             <div>
               <input
