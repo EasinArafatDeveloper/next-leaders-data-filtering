@@ -2,26 +2,27 @@
 
 export const dynamic = 'force-dynamic';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Lock,
   Flame,
   ShieldCheck,
   ShieldAlert,
   Search,
-  Users,
   Clock,
   Phone,
   Mail,
   MapPin,
-  Calendar,
   KeyRound,
   EyeOff,
   Sparkles,
-  AlertTriangle,
-  FileSpreadsheet,
-  Check,
   CameraOff,
+  LayoutGrid,
+  Table2,
+  Copy,
+  Check,
+  Tag,
+  Users,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -54,6 +55,25 @@ interface ShareData {
   accessedAt: string;
 }
 
+const STATUS_BADGES: Record<string, { bg: string; dot: string }> = {
+  Active: {
+    bg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    dot: 'bg-emerald-500',
+  },
+  Inactive: {
+    bg: 'bg-gray-100 text-gray-700 border-gray-200',
+    dot: 'bg-gray-400',
+  },
+  Pending: {
+    bg: 'bg-amber-50 text-amber-700 border-amber-200',
+    dot: 'bg-amber-500',
+  },
+  Suspended: {
+    bg: 'bg-rose-50 text-rose-700 border-rose-200',
+    dot: 'bg-rose-500',
+  },
+};
+
 export default function SecureVaultViewerPage({ params }: { params: { token: string } }) {
   const { token } = params;
 
@@ -72,13 +92,31 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
   // Loaded data
   const [shareData, setShareData] = useState<ShareData | null>(null);
 
+  // View mode toggle: 'cards' | 'table' (Defaults to cards as requested)
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+
   // Local search filter
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Copy phone feedback
+  const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
 
   // Security violation states
   const [isWindowBlurred, setIsWindowBlurred] = useState(false);
   const [isDevToolsDetected, setIsDevToolsDetected] = useState(false);
   const [isScreenshotAttempted, setIsScreenshotAttempted] = useState(false);
+
+  const copyPhoneToClipboard = (phone: string) => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(phone);
+      }
+      setCopiedPhone(phone);
+      setTimeout(() => {
+        setCopiedPhone(null);
+      }, 2000);
+    } catch {}
+  };
 
   // 1. Initial Link Load
   useEffect(() => {
@@ -114,7 +152,7 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
         }
 
         setShareData(data);
-      } catch (err: any) {
+      } catch {
         setErrorInfo({
           message: 'Network error or unable to load encrypted payload.',
           statusType: 'ERROR',
@@ -253,7 +291,7 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
       }
     };
 
-    // Instant screen blackout when mouse leaves window (e.g. user clicking Snipping Tool or external app)
+    // Instant screen blackout when mouse leaves window
     const handleMouseLeave = () => {
       setIsWindowBlurred(true);
     };
@@ -340,7 +378,6 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
 
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 select-none font-sans">
-        {/* Anti-print CSS */}
         <style jsx global>{`
           @media print {
             body {
@@ -539,7 +576,7 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
           -webkit-touch-callout: none !important;
         }
         /* Instant CSS Blur when window is inactive or cursor leaves */
-        body:not(:focus-within) .confidential-table-wrapper {
+        body:not(:focus-within) .confidential-view-wrapper {
           filter: blur(25px) !important;
           opacity: 0.15 !important;
           pointer-events: none !important;
@@ -583,159 +620,325 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-4 z-10">
-        {/* Notice Banner */}
-        <div className="p-3.5 rounded-2xl bg-brand-50/90 border border-brand-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs">
+        {/* Notice & Control Toolbar (View Toggle + Search) */}
+        <div className="p-3.5 rounded-2xl bg-white border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
           <div className="flex items-center gap-2.5">
             <Sparkles className="w-4 h-4 text-brand-600 shrink-0" />
-            <span className="text-brand-950 font-medium">
+            <span className="text-xs font-semibold text-gray-800">
               {shareData.isOneTime
-                ? '🔥 This snapshot will permanently self-destruct once you leave or reload this page.'
-                : '🔒 You are viewing a confidential snapshot of filtered contacts.'}
+                ? '🔥 Snapshot will self-destruct once page is closed/reloaded.'
+                : `Showing ${filteredRecords.length} of ${shareData.recordCount} contacts`}
             </span>
           </div>
 
-          {/* Local Search Input */}
-          <div className="relative w-full sm:w-64">
-            <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-2.5" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search in shared records..."
-              className="w-full pl-8 pr-3 py-1.5 bg-white border border-gray-300 rounded-xl text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-xs"
-            />
+          {/* Right Action Bar: Toggle Switch + Search */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Cards vs Table View Toggle Pill (Matching User Design) */}
+            <div className="flex items-center p-1 bg-gray-100 rounded-xl border border-gray-200/80 shadow-2xs">
+              <button
+                type="button"
+                onClick={() => setViewMode('cards')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  viewMode === 'cards'
+                    ? 'bg-white text-brand-600 shadow-xs'
+                    : 'text-gray-500 hover:text-gray-800'
+                }`}
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span>Cards</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('table')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  viewMode === 'table'
+                    ? 'bg-white text-brand-600 shadow-xs'
+                    : 'text-gray-500 hover:text-gray-800'
+                }`}
+              >
+                <Table2 className="w-3.5 h-3.5" />
+                <span>Table</span>
+              </button>
+            </div>
+
+            {/* Local Search Input */}
+            <div className="relative w-full sm:w-56">
+              <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search contacts..."
+                className="w-full pl-8 pr-3 py-1.5 bg-gray-50 border border-gray-300 rounded-xl text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white shadow-2xs"
+              />
+            </div>
           </div>
         </div>
 
-        {/* Records Table View (Protected Container) */}
-        <div className="confidential-table-wrapper rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden transition-all duration-150">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50/90 text-gray-600 uppercase tracking-wider text-[10px] font-bold">
-                  <th className="py-3 px-4">#</th>
-                  <th className="py-3 px-4">Contact</th>
-                  <th className="py-3 px-4">Phone Number</th>
-                  <th className="py-3 px-4">Tags & Segment</th>
-                  <th className="py-3 px-4">Location</th>
-                  <th className="py-3 px-4">Demographics</th>
-                  <th className="py-3 px-4">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredRecords.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-8 text-center text-gray-400 text-xs font-medium">
-                      No records match your search inside this shared view.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredRecords.map((record, index) => {
-                    return (
-                      <tr
-                        key={index}
-                        className="hover:bg-slate-50/80 transition-colors"
-                      >
-                        {/* Index */}
-                        <td className="py-3 px-4 text-gray-400 font-mono text-[11px]">
-                          {index + 1}
-                        </td>
+        {/* Confidential View Wrapper (Protected Container with Auto-Blur) */}
+        <div className="confidential-view-wrapper transition-all duration-150">
+          {filteredRecords.length === 0 ? (
+            <div className="p-12 text-center rounded-2xl bg-white border border-gray-200 shadow-sm space-y-2">
+              <Users className="w-10 h-10 text-gray-300 mx-auto" />
+              <p className="text-gray-500 text-xs font-medium">
+                No contacts match your search query inside this shared view.
+              </p>
+            </div>
+          ) : viewMode === 'cards' ? (
+            /* 2-Column Responsive Secure Cards View */
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredRecords.map((record, index) => {
+                const badge = STATUS_BADGES[record.status || 'Active'] || STATUS_BADGES.Active;
 
-                        {/* Contact Name & Email */}
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2.5">
-                            {record.avatarUrl ? (
-                              <img
-                                src={record.avatarUrl}
-                                alt=""
-                                className="w-8 h-8 rounded-full object-cover border border-gray-200 shrink-0 shadow-xs"
-                              />
-                            ) : (
-                              <div className="w-8 h-8 rounded-full bg-brand-50 text-brand-700 font-bold flex items-center justify-center text-xs shrink-0 border border-brand-200">
-                                {record.name?.[0] || 'U'}
-                              </div>
-                            )}
-                            <div>
-                              <div className="font-bold text-gray-900 text-xs">
-                                {record.name || 'Unnamed Contact'}
-                              </div>
-                              {record.email && (
-                                <div className="text-[11px] text-gray-500 flex items-center gap-1">
-                                  <Mail className="w-3 h-3 text-gray-400" /> {record.email}
+                return (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.15, delay: (index % 10) * 0.02 }}
+                    className="p-4 sm:p-5 rounded-2xl bg-white border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between group"
+                  >
+                    <div>
+                      {/* Top Bar: Index & Status */}
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <span className="px-2 py-0.5 rounded-md bg-gray-100 text-gray-500 font-mono text-[10px] font-bold">
+                          #{index + 1}
+                        </span>
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${badge.bg}`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
+                          {record.status || 'Active'}
+                        </span>
+                      </div>
+
+                      {/* Contact Profile Row */}
+                      <div className="flex items-start gap-3">
+                        {/* Avatar */}
+                        {record.avatarUrl ? (
+                          <img
+                            src={record.avatarUrl}
+                            alt=""
+                            className="w-11 h-11 rounded-2xl object-cover border border-gray-200 shrink-0 shadow-xs"
+                          />
+                        ) : (
+                          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-600 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-sm shadow-brand-600/20">
+                            {record.name ? record.name.slice(0, 2).toUpperCase() : 'U'}
+                          </div>
+                        )}
+
+                        {/* Name & Email */}
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-bold text-gray-900 text-sm truncate group-hover:text-brand-600 transition-colors">
+                            {record.name || 'Unnamed Contact'}
+                          </h4>
+                          {record.email ? (
+                            <p className="text-[11px] text-gray-500 truncate flex items-center gap-1 mt-0.5">
+                              <Mail className="w-3 h-3 text-gray-400 shrink-0" />
+                              {record.email}
+                            </p>
+                          ) : (
+                            <p className="text-[11px] text-gray-400 mt-0.5">Verified Contact</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Phone Box with Direct Call & Copy Action */}
+                      <div className="mt-3 p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2">
+                        <a
+                          href={`tel:${record.phone}`}
+                          className="flex items-center gap-2 font-mono font-bold text-xs text-emerald-700 hover:text-emerald-800 transition-colors"
+                        >
+                          <div className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                            <Phone className="w-3.5 h-3.5" />
+                          </div>
+                          <span>{record.phone}</span>
+                        </a>
+
+                        <button
+                          type="button"
+                          onClick={() => copyPhoneToClipboard(record.phone)}
+                          title="Copy Phone Number"
+                          className="px-2.5 py-1 rounded-lg bg-white border border-gray-200 text-gray-600 hover:text-brand-600 hover:border-brand-300 transition-all shadow-2xs text-[11px] flex items-center gap-1 font-medium active:scale-95"
+                        >
+                          {copiedPhone === record.phone ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              <span className="text-emerald-700 font-bold text-[10px]">Copied</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5 text-gray-500" />
+                              <span className="text-gray-600 text-[10px]">Copy</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Tags / Segments */}
+                      {((record.tags && record.tags.length > 0) || record.category) && (
+                        <div className="flex flex-wrap gap-1 mt-2.5">
+                          {record.tags && record.tags.length > 0 ? (
+                            record.tags.map((t, tIdx) => (
+                              <span
+                                key={tIdx}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-bold"
+                              >
+                                <Tag className="w-2.5 h-2.5 text-purple-500" />
+                                {t}
+                              </span>
+                            ))
+                          ) : record.category ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-bold">
+                              <Tag className="w-2.5 h-2.5 text-purple-500" />
+                              {record.category}
+                            </span>
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Card Footer: Location & Demographics */}
+                    <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-600">
+                      <div className="flex items-center gap-1 truncate">
+                        <MapPin className="w-3 h-3 text-gray-400 shrink-0" />
+                        <span className="truncate">
+                          {record.location || record.area || 'Location N/A'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 font-medium text-gray-700 shrink-0">
+                        <span>{record.gender || '–'}</span>
+                        {record.age ? <span className="text-gray-400">({record.age}y)</span> : null}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          ) : (
+            /* Table View */
+            <div className="rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-200 bg-gray-50/90 text-gray-600 uppercase tracking-wider text-[10px] font-bold">
+                      <th className="py-3 px-4">#</th>
+                      <th className="py-3 px-4">Contact</th>
+                      <th className="py-3 px-4">Phone Number</th>
+                      <th className="py-3 px-4">Tags & Segment</th>
+                      <th className="py-3 px-4">Location</th>
+                      <th className="py-3 px-4">Demographics</th>
+                      <th className="py-3 px-4">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {filteredRecords.map((record, index) => {
+                      return (
+                        <tr
+                          key={index}
+                          className="hover:bg-slate-50/80 transition-colors"
+                        >
+                          {/* Index */}
+                          <td className="py-3 px-4 text-gray-400 font-mono text-[11px]">
+                            {index + 1}
+                          </td>
+
+                          {/* Contact Name & Email */}
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2.5">
+                              {record.avatarUrl ? (
+                                <img
+                                  src={record.avatarUrl}
+                                  alt=""
+                                  className="w-8 h-8 rounded-full object-cover border border-gray-200 shrink-0 shadow-xs"
+                                />
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-brand-50 text-brand-700 font-bold flex items-center justify-center text-xs shrink-0 border border-brand-200">
+                                  {record.name?.[0] || 'U'}
                                 </div>
                               )}
+                              <div>
+                                <div className="font-bold text-gray-900 text-xs">
+                                  {record.name || 'Unnamed Contact'}
+                                </div>
+                                {record.email && (
+                                  <div className="text-[11px] text-gray-500 flex items-center gap-1">
+                                    <Mail className="w-3 h-3 text-gray-400" /> {record.email}
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </td>
+                          </td>
 
-                        {/* Phone */}
-                        <td className="py-3 px-4 font-mono font-bold text-emerald-700">
-                          <div className="flex items-center gap-1.5">
-                            <Phone className="w-3.5 h-3.5 text-gray-400" />
-                            <span>{record.phone}</span>
-                          </div>
-                        </td>
+                          {/* Phone */}
+                          <td className="py-3 px-4 font-mono font-bold text-emerald-700">
+                            <div className="flex items-center gap-1.5">
+                              <Phone className="w-3.5 h-3.5 text-gray-400" />
+                              <span>{record.phone}</span>
+                            </div>
+                          </td>
 
-                        {/* Tags */}
-                        <td className="py-3 px-4">
-                          <div className="flex flex-wrap gap-1">
-                            {record.tags && record.tags.length > 0 ? (
-                              record.tags.map((t) => (
-                                <span
-                                  key={t}
-                                  className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-semibold"
-                                >
-                                  {t}
+                          {/* Tags */}
+                          <td className="py-3 px-4">
+                            <div className="flex flex-wrap gap-1">
+                              {record.tags && record.tags.length > 0 ? (
+                                record.tags.map((t) => (
+                                  <span
+                                    key={t}
+                                    className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-semibold"
+                                  >
+                                    {t}
+                                  </span>
+                                ))
+                              ) : record.category ? (
+                                <span className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-semibold">
+                                  {record.category}
                                 </span>
-                              ))
-                            ) : record.category ? (
-                              <span className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-semibold">
-                                {record.category}
-                              </span>
-                            ) : (
-                              <span className="text-gray-300 text-[11px]">–</span>
-                            )}
-                          </div>
-                        </td>
-
-                        {/* Location */}
-                        <td className="py-3 px-4 text-gray-700">
-                          {record.location ? (
-                            <div className="flex items-center gap-1">
-                              <MapPin className="w-3 h-3 text-gray-400" />
-                              <span>{record.location}</span>
-                              {record.area && <span className="text-gray-400">({record.area})</span>}
+                              ) : (
+                                <span className="text-gray-300 text-[11px]">–</span>
+                              )}
                             </div>
-                          ) : (
-                            <span className="text-gray-300">–</span>
-                          )}
-                        </td>
+                          </td>
 
-                        {/* Demographics */}
-                        <td className="py-3 px-4 text-gray-700">
-                          <span>{record.gender || '–'}</span>
-                          {record.age ? <span className="text-gray-400 ml-1">({record.age}y)</span> : null}
-                        </td>
+                          {/* Location */}
+                          <td className="py-3 px-4 text-gray-700">
+                            {record.location ? (
+                              <div className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3 text-gray-400" />
+                                <span>{record.location}</span>
+                                {record.area && <span className="text-gray-400">({record.area})</span>}
+                              </div>
+                            ) : (
+                              <span className="text-gray-300">–</span>
+                            )}
+                          </td>
 
-                        {/* Status */}
-                        <td className="py-3 px-4">
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              record.status === 'Active'
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                : 'bg-gray-100 text-gray-600 border border-gray-200'
-                            }`}
-                          >
-                            {record.status || 'Active'}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                          {/* Demographics */}
+                          <td className="py-3 px-4 text-gray-700">
+                            <span>{record.gender || '–'}</span>
+                            {record.age ? <span className="text-gray-400 ml-1">({record.age}y)</span> : null}
+                          </td>
+
+                          {/* Status */}
+                          <td className="py-3 px-4">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                record.status === 'Active'
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : 'bg-gray-100 text-gray-600 border border-gray-200'
+                              }`}
+                            >
+                              {record.status || 'Active'}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       </main>
 
