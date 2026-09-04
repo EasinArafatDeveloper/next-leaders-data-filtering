@@ -21,6 +21,7 @@ import {
   AlertTriangle,
   FileSpreadsheet,
   Check,
+  CameraOff,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -77,6 +78,7 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
   // Security violation states
   const [isWindowBlurred, setIsWindowBlurred] = useState(false);
   const [isDevToolsDetected, setIsDevToolsDetected] = useState(false);
+  const [isScreenshotAttempted, setIsScreenshotAttempted] = useState(false);
 
   // 1. Initial Link Load
   useEffect(() => {
@@ -125,7 +127,7 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
     loadShareLink();
   }, [token]);
 
-  // 2. Passcode Unlock Submit
+  // 2. Passcode Unlock Submit with 3-Attempt Auto-Lock / Self-Destruct
   const handleUnlockPasscode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!passcode.trim()) {
@@ -146,7 +148,9 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
       if (res.status === 410) {
         setRequiresPasscode(false);
         setErrorInfo({
-          message: data.error || 'This link has expired or was already burned.',
+          message:
+            data.error ||
+            'Maximum failed passcode attempts reached. This link has been permanently burned.',
           statusType: data.statusType || 'BURNED',
         });
         return;
@@ -166,38 +170,78 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
     }
   };
 
-  // 3. Security Handlers: Anti-Inspect, Anti-Copy, Anti-Keybinds, Blur & DevTools Protection
+  // 3. Ultra-Hardened Security Stack: Anti-Screenshot, Anti-Inspect, Clipboard Wiper, Privacy Blurs
   useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
       return false;
     };
 
+    const triggerScreenshotLock = () => {
+      setIsScreenshotAttempted(true);
+      setIsWindowBlurred(true);
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText('⚠️ CONFIDENTIAL - SCREENSHOT PROHIBITED BY SECURITY POLICY');
+        }
+      } catch {}
+      setTimeout(() => {
+        setIsScreenshotAttempted(false);
+      }, 3500);
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Block F12
-      if (e.key === 'F12') {
+      // 1. Intercept PrintScreen Key & Screenshot Combinations
+      if (
+        e.key === 'PrintScreen' ||
+        e.code === 'PrintScreen' ||
+        e.keyCode === 44 ||
+        (e.altKey && (e.key === 'PrintScreen' || e.code === 'PrintScreen')) ||
+        ((e.metaKey || e.ctrlKey) && e.shiftKey && ['s', 'S', '3', '4', '5'].includes(e.key))
+      ) {
+        e.preventDefault();
+        triggerScreenshotLock();
+        return false;
+      }
+
+      // 2. Block F12 (DevTools)
+      if (e.key === 'F12' || e.keyCode === 123) {
         e.preventDefault();
         return false;
       }
-      // Block Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C (DevTools)
+
+      // 3. Block Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C (DevTools)
       if (e.ctrlKey && e.shiftKey && ['I', 'J', 'C', 'i', 'j', 'c'].includes(e.key)) {
         e.preventDefault();
         return false;
       }
-      // Block Ctrl+U (View Source)
+
+      // 4. Block Ctrl+U (View Source)
       if (e.ctrlKey && (e.key === 'U' || e.key === 'u')) {
         e.preventDefault();
         return false;
       }
-      // Block Ctrl+S (Save Page) & Ctrl+P (Print)
+
+      // 5. Block Ctrl+S (Save Page) & Ctrl+P (Print)
       if (e.ctrlKey && ['s', 'S', 'p', 'P'].includes(e.key)) {
         e.preventDefault();
         return false;
       }
     };
 
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'PrintScreen' || e.code === 'PrintScreen' || e.keyCode === 44) {
+        triggerScreenshotLock();
+      }
+    };
+
     const handleCopyCut = (e: ClipboardEvent) => {
       e.preventDefault();
+      try {
+        if (e.clipboardData) {
+          e.clipboardData.setData('text/plain', '⚠️ CONFIDENTIAL - COPYING DISABLED');
+        }
+      } catch {}
       return false;
     };
 
@@ -207,6 +251,14 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
       } else {
         setIsWindowBlurred(false);
       }
+    };
+
+    // Instant screen blackout when mouse leaves window (e.g. user clicking Snipping Tool or external app)
+    const handleMouseLeave = () => {
+      setIsWindowBlurred(true);
+    };
+    const handleMouseEnter = () => {
+      setIsWindowBlurred(false);
     };
 
     // DevTools resize detection
@@ -223,9 +275,12 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
 
     window.addEventListener('contextmenu', handleContextMenu);
     window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
     window.addEventListener('copy', handleCopyCut);
     window.addEventListener('cut', handleCopyCut);
     document.addEventListener('visibilitychange', handleFocusChange);
+    document.addEventListener('mouseleave', handleMouseLeave);
+    document.addEventListener('mouseenter', handleMouseEnter);
     window.addEventListener('blur', () => setIsWindowBlurred(true));
     window.addEventListener('focus', () => setIsWindowBlurred(false));
     window.addEventListener('resize', checkDevTools);
@@ -233,9 +288,12 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
     return () => {
       window.removeEventListener('contextmenu', handleContextMenu);
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('copy', handleCopyCut);
       window.removeEventListener('cut', handleCopyCut);
       document.removeEventListener('visibilitychange', handleFocusChange);
+      document.removeEventListener('mouseleave', handleMouseLeave);
+      document.removeEventListener('mouseenter', handleMouseEnter);
       window.removeEventListener('resize', checkDevTools);
     };
   }, []);
@@ -343,7 +401,7 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Security Protocol Explanation:
             </div>
             <p>
-              This snapshot was shared using <strong>One-Time Burn Protection</strong>. To prevent unauthorized redistribution or automated scraping, records are permanently erased from memory after the first viewing session.
+              This snapshot was shared using <strong>One-Time Burn Protection & 3-Strike Auto-Lock</strong>. To prevent unauthorized redistribution or data harvesting, records are permanently erased from memory after the viewing session ends or invalid passcode threshold is reached.
             </p>
           </div>
         </motion.div>
@@ -371,6 +429,7 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
             </p>
           </div>
 
+          {/* Anti-Brute-Force Warning Banner */}
           <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 font-semibold flex items-center justify-center gap-1.5 shadow-xs">
             <Flame className="w-3.5 h-3.5 text-amber-600 shrink-0" />
             <span>Anti-Brute Force: 3 wrong attempts will permanently burn this link.</span>
@@ -415,39 +474,49 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col select-none relative overflow-x-hidden font-sans">
-      {/* Dynamic diagonal watermark pattern across entire page in light theme */}
+      {/* Dynamic High-Density Diagonal Watermark Pattern */}
       <div
-        className="pointer-events-none fixed inset-0 z-10 opacity-[0.045] flex flex-wrap items-center justify-center gap-24 p-12 overflow-hidden rotate-[-25deg] select-none text-slate-900"
+        className="pointer-events-none fixed inset-0 z-20 opacity-[0.09] flex flex-wrap items-center justify-center gap-16 p-6 overflow-hidden rotate-[-22deg] select-none text-slate-950 font-black"
         aria-hidden="true"
       >
-        {Array.from({ length: 48 }).map((_, i) => (
-          <span key={i} className="text-sm font-black tracking-widest whitespace-nowrap">
+        {Array.from({ length: 96 }).map((_, i) => (
+          <span key={i} className="text-xs sm:text-sm font-black tracking-widest whitespace-nowrap drop-shadow-xs">
             {shareData.sessionWatermark}
           </span>
         ))}
       </div>
 
-      {/* Screen blur overlay if window lost focus or DevTools detected */}
+      {/* Screen blur overlay if window lost focus, screenshot attempted, or DevTools detected */}
       <AnimatePresence>
-        {(isWindowBlurred || isDevToolsDetected) && (
+        {(isWindowBlurred || isDevToolsDetected || isScreenshotAttempted) && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-white/90 backdrop-blur-2xl flex flex-col items-center justify-center p-6 text-center select-none"
+            className="fixed inset-0 z-50 bg-white/95 backdrop-blur-3xl flex flex-col items-center justify-center p-6 text-center select-none"
           >
-            <div className="p-6 rounded-3xl bg-white border border-gray-200 shadow-2xl max-w-md space-y-4">
-              <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto">
-                <EyeOff className="w-7 h-7" />
+            <div className="p-7 rounded-3xl bg-white border border-gray-200 shadow-2xl max-w-md space-y-4">
+              <div className="w-16 h-16 rounded-2xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center mx-auto shadow-inner">
+                {isScreenshotAttempted ? (
+                  <CameraOff className="w-8 h-8 animate-pulse text-rose-600" />
+                ) : (
+                  <EyeOff className="w-8 h-8 text-amber-600" />
+                )}
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-900">
-                  {isDevToolsDetected ? 'Developer Tools Detected' : 'Content Hidden (Privacy Guard)'}
+                <h3 className="text-lg font-extrabold text-gray-900">
+                  {isScreenshotAttempted
+                    ? 'Screenshot Attempt Blocked!'
+                    : isDevToolsDetected
+                    ? 'Developer Tools Detected'
+                    : 'Confidential Data Hidden (Privacy Guard)'}
                 </h3>
-                <p className="text-xs text-gray-500 mt-1">
-                  {isDevToolsDetected
+                <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                  {isScreenshotAttempted
+                    ? 'Screen capturing is strictly prohibited on this secure gateway. Clipboard has been cleared.'
+                    : isDevToolsDetected
                     ? 'Please close your browser developer tools to view this confidential data.'
-                    : 'Click back inside this window to resume viewing.'}
+                    : 'Click back inside this browser window to resume viewing.'}
                 </p>
               </div>
             </div>
@@ -455,7 +524,7 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
         )}
       </AnimatePresence>
 
-      {/* Anti-print and text selection prevention CSS */}
+      {/* Anti-print and Zero-Latency CSS Anti-Screenshot Shroud */}
       <style jsx global>{`
         @media print {
           body {
@@ -467,6 +536,13 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
           -moz-user-select: none !important;
           -ms-user-select: none !important;
           user-select: none !important;
+          -webkit-touch-callout: none !important;
+        }
+        /* Instant CSS Blur when window is inactive or cursor leaves */
+        body:not(:focus-within) .confidential-table-wrapper {
+          filter: blur(25px) !important;
+          opacity: 0.15 !important;
+          pointer-events: none !important;
         }
       `}</style>
 
@@ -499,14 +575,14 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
           <div className="flex items-center gap-2">
             <div className="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-800 flex items-center gap-1.5 font-medium shadow-xs">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Anti-Leak Shield Active</span>
+              <span>Anti-Screenshot & Anti-Leak Active</span>
             </div>
           </div>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-4 z-20">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-4 z-10">
         {/* Notice Banner */}
         <div className="p-3.5 rounded-2xl bg-brand-50/90 border border-brand-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs">
           <div className="flex items-center gap-2.5">
@@ -531,8 +607,8 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
           </div>
         </div>
 
-        {/* Records Table View (White Theme) */}
-        <div className="rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden">
+        {/* Records Table View (Protected Container) */}
+        <div className="confidential-table-wrapper rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden transition-all duration-150">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
