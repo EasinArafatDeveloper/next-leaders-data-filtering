@@ -92,7 +92,7 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
   // Loaded data
   const [shareData, setShareData] = useState<ShareData | null>(null);
 
-  // View mode toggle: 'cards' | 'table' (Defaults to cards as requested)
+  // View mode toggle: 'cards' | 'table' (Defaults to cards)
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
 
   // Local search filter
@@ -217,7 +217,6 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
 
     const triggerScreenshotLock = () => {
       setIsScreenshotAttempted(true);
-      setIsWindowBlurred(true);
       try {
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText('⚠️ CONFIDENTIAL - SCREENSHOT PROHIBITED BY SECURITY POLICY');
@@ -225,11 +224,11 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
       } catch {}
       setTimeout(() => {
         setIsScreenshotAttempted(false);
-      }, 3500);
+      }, 4000);
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // 1. Intercept PrintScreen Key & Screenshot Combinations
+      // 1. Intercept PrintScreen Key & Screenshot Combinations (Win+Shift+S, Cmd+Shift+3/4)
       if (
         e.key === 'PrintScreen' ||
         e.code === 'PrintScreen' ||
@@ -291,12 +290,13 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
       }
     };
 
-    // Instant screen blackout when mouse leaves window
-    const handleMouseLeave = () => {
+    const handleWindowBlur = () => {
       setIsWindowBlurred(true);
     };
-    const handleMouseEnter = () => {
+
+    const handleWindowFocus = () => {
       setIsWindowBlurred(false);
+      setIsScreenshotAttempted(false);
     };
 
     // DevTools resize detection
@@ -317,10 +317,8 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
     window.addEventListener('copy', handleCopyCut);
     window.addEventListener('cut', handleCopyCut);
     document.addEventListener('visibilitychange', handleFocusChange);
-    document.addEventListener('mouseleave', handleMouseLeave);
-    document.addEventListener('mouseenter', handleMouseEnter);
-    window.addEventListener('blur', () => setIsWindowBlurred(true));
-    window.addEventListener('focus', () => setIsWindowBlurred(false));
+    window.addEventListener('blur', handleWindowBlur);
+    window.addEventListener('focus', handleWindowFocus);
     window.addEventListener('resize', checkDevTools);
 
     return () => {
@@ -330,8 +328,8 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
       window.removeEventListener('copy', handleCopyCut);
       window.removeEventListener('cut', handleCopyCut);
       document.removeEventListener('visibilitychange', handleFocusChange);
-      document.removeEventListener('mouseleave', handleMouseLeave);
-      document.removeEventListener('mouseenter', handleMouseEnter);
+      window.removeEventListener('blur', handleWindowBlur);
+      window.removeEventListener('focus', handleWindowFocus);
       window.removeEventListener('resize', checkDevTools);
     };
   }, []);
@@ -509,6 +507,8 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
 
   if (!shareData) return null;
 
+  const isShieldActive = isWindowBlurred || isDevToolsDetected || isScreenshotAttempted;
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col select-none relative overflow-x-hidden font-sans">
       {/* Dynamic High-Density Diagonal Watermark Pattern */}
@@ -523,45 +523,56 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
         ))}
       </div>
 
-      {/* Screen blur overlay if window lost focus, screenshot attempted, or DevTools detected */}
+      {/* 100% Solid Opaque Privacy Blackout Shield (Zero-Transparency - No bleed through on screenshot) */}
       <AnimatePresence>
-        {(isWindowBlurred || isDevToolsDetected || isScreenshotAttempted) && (
+        {isShieldActive && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-white/95 backdrop-blur-3xl flex flex-col items-center justify-center p-6 text-center select-none"
+            transition={{ duration: 0.1 }}
+            className="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center p-6 text-center select-none"
           >
-            <div className="p-7 rounded-3xl bg-white border border-gray-200 shadow-2xl max-w-md space-y-4">
-              <div className="w-16 h-16 rounded-2xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center mx-auto shadow-inner">
+            <div className="p-8 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl max-w-md space-y-4 text-white">
+              <div className="w-16 h-16 rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center mx-auto shadow-inner">
                 {isScreenshotAttempted ? (
-                  <CameraOff className="w-8 h-8 animate-pulse text-rose-600" />
+                  <CameraOff className="w-8 h-8 animate-pulse text-rose-500" />
                 ) : (
-                  <EyeOff className="w-8 h-8 text-amber-600" />
+                  <EyeOff className="w-8 h-8 text-amber-400" />
                 )}
               </div>
               <div>
-                <h3 className="text-lg font-extrabold text-gray-900">
+                <h3 className="text-lg font-extrabold text-white">
                   {isScreenshotAttempted
                     ? 'Screenshot Attempt Blocked!'
                     : isDevToolsDetected
                     ? 'Developer Tools Detected'
                     : 'Confidential Data Hidden (Privacy Guard)'}
                 </h3>
-                <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                <p className="text-xs text-slate-400 mt-2 leading-relaxed">
                   {isScreenshotAttempted
                     ? 'Screen capturing is strictly prohibited on this secure gateway. Clipboard has been cleared.'
                     : isDevToolsDetected
                     ? 'Please close your browser developer tools to view this confidential data.'
-                    : 'Click back inside this browser window to resume viewing.'}
+                    : 'Click anywhere inside this window to resume viewing.'}
                 </p>
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsWindowBlurred(false);
+                  setIsScreenshotAttempted(false);
+                }}
+                className="px-5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs shadow-lg shadow-brand-600/30 transition-all active:scale-95"
+              >
+                Resume Viewing
+              </button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Anti-print and Zero-Latency CSS Anti-Screenshot Shroud */}
+      {/* Anti-print CSS */}
       <style jsx global>{`
         @media print {
           body {
@@ -574,12 +585,6 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
           -ms-user-select: none !important;
           user-select: none !important;
           -webkit-touch-callout: none !important;
-        }
-        /* Instant CSS Blur when window is inactive or cursor leaves */
-        body:not(:focus-within) .confidential-view-wrapper {
-          filter: blur(25px) !important;
-          opacity: 0.15 !important;
-          pointer-events: none !important;
         }
       `}</style>
 
@@ -619,7 +624,13 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-4 z-10">
+      <main
+        style={{
+          visibility: isShieldActive ? 'hidden' : 'visible',
+          opacity: isShieldActive ? 0 : 1,
+        }}
+        className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-4 z-10 transition-opacity duration-100"
+      >
         {/* Notice & Control Toolbar (View Toggle + Search) */}
         <div className="p-3.5 rounded-2xl bg-white border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
           <div className="flex items-center gap-2.5">
@@ -633,7 +644,7 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
 
           {/* Right Action Bar: Toggle Switch + Search */}
           <div className="flex flex-wrap items-center gap-2.5">
-            {/* Cards vs Table View Toggle Pill (Matching User Design) */}
+            {/* Cards vs Table View Toggle Pill */}
             <div className="flex items-center p-1 bg-gray-100 rounded-xl border border-gray-200/80 shadow-2xs">
               <button
                 type="button"
@@ -675,8 +686,8 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
           </div>
         </div>
 
-        {/* Confidential View Wrapper (Protected Container with Auto-Blur) */}
-        <div className="confidential-view-wrapper transition-all duration-150">
+        {/* View Wrapper */}
+        <div className="transition-all duration-150">
           {filteredRecords.length === 0 ? (
             <div className="p-12 text-center rounded-2xl bg-white border border-gray-200 shadow-sm space-y-2">
               <Users className="w-10 h-10 text-gray-300 mx-auto" />
