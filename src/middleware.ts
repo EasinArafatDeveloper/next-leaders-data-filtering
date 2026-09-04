@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
+import { isStealthShareDomain } from '@/lib/config/domains';
 
 const SESSION_COOKIE_NAME = 'dataflow_session';
 
@@ -14,23 +15,54 @@ const PUBLIC_PATHS = [
   '/login',
   '/api/auth/login',
   '/api/auth/logout',
+  '/v',
   '/share',
   '/api/share',
 ];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const host =
+    request.headers.get('x-forwarded-host') ||
+    request.headers.get('host') ||
+    request.nextUrl.hostname ||
+    '';
 
   // 1. Skip static assets, Next.js internal files, and public images
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/static') ||
-    pathname.includes('.') && !pathname.endsWith('.html')
+    (pathname.includes('.') && !pathname.endsWith('.html'))
   ) {
     return NextResponse.next();
   }
 
-  // 2. Extract and verify session token from HttpOnly cookie
+  // 2. STEALTH CLOAKING DEFENSE FOR DISPOSABLE SHARE DOMAINS (tempshr.click, tempshr.xyz, tempshr.lol)
+  // If request is coming through a disposable share domain:
+  if (isStealthShareDomain(host)) {
+    const isAllowedSharePath =
+      pathname.startsWith('/v/') ||
+      pathname.startsWith('/api/share/') ||
+      pathname.startsWith('/share/');
+
+    if (isAllowedSharePath) {
+      const res = NextResponse.next();
+      applySecurityHeaders(res);
+      res.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
+      return res;
+    }
+
+    // Direct visit to root '/', '/login', '/dashboard' on share domains gets an immediate 404 Blackhole!
+    return new NextResponse('404 Not Found', {
+      status: 404,
+      headers: {
+        'Content-Type': 'text/plain',
+        'X-Robots-Tag': 'noindex, nofollow',
+      },
+    });
+  }
+
+  // 3. Extract and verify session token from HttpOnly cookie
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   let isAuthenticated = false;
 
@@ -48,19 +80,19 @@ export async function middleware(request: NextRequest) {
 
   const isPublicPath = PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(path + '/'));
 
-  // 3. If authenticated user attempts to visit /login, redirect to /dashboard
+  // 4. If authenticated user attempts to visit /login, redirect to /dashboard
   if (pathname === '/login' && isAuthenticated) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
-  // 4. If path is public (e.g. /login, /api/auth/login), allow through with security headers
+  // 5. If path is public (e.g. /login, /api/auth/login, /v/...), allow through with security headers
   if (isPublicPath) {
     const res = NextResponse.next();
     applySecurityHeaders(res);
     return res;
   }
 
-  // 5. If user is NOT authenticated on a protected route
+  // 6. If user is NOT authenticated on a protected route
   if (!isAuthenticated) {
     // For protected API endpoints, return 401 Unauthorized JSON
     if (pathname.startsWith('/api/')) {
@@ -78,7 +110,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // 6. User is authenticated and accessing protected dashboard/API
+  // 7. User is authenticated and accessing protected dashboard/API
   const response = NextResponse.next();
   applySecurityHeaders(response);
   return response;

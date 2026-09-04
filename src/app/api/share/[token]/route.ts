@@ -13,7 +13,7 @@ export async function GET(
     await connectToDatabase();
 
     const { token } = params;
-    if (!token || !token.startsWith('sec_')) {
+    if (!token || token.trim().length < 8) {
       return NextResponse.json(
         { error: 'Invalid share link format.' },
         { status: 400 }

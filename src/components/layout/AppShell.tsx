@@ -34,8 +34,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     });
   };
 
-  // If on login or public share page, render full screen without dashboard shell
-  if (pathname === '/login' || pathname?.startsWith('/share')) {
+  // If on login or public share/vault page, render full screen without dashboard shell
+  if (pathname === '/login' || pathname?.startsWith('/share') || pathname?.startsWith('/v/')) {
     return <>{children}</>;
   }
 

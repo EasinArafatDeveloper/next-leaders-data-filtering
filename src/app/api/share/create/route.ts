@@ -4,7 +4,13 @@ import connectToDatabase from '@/lib/db';
 import RecordModel from '@/lib/models/Record';
 import ShareLinkModel from '@/lib/models/ShareLink';
 import ActivityLogModel from '@/lib/models/ActivityLog';
-import { getSessionUser, verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
+import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
+import {
+  generateCryptoToken,
+  getRandomShareDomain,
+  getShareDomains,
+  formatDomainLabel,
+} from '@/lib/config/domains';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,6 +47,7 @@ export async function POST(request: NextRequest) {
       isOneTime = true,
       expiryHours = 24,
       passcode,
+      targetDomain,
     } = body || {};
 
     let matchingRecords: any[] = [];
@@ -199,9 +206,8 @@ export async function POST(request: NextRequest) {
       customFields: r.customFields || {},
     }));
 
-    // 4. Generate high-entropy cryptographic token
-    const randomHex = crypto.randomBytes(16).toString('hex');
-    const token = `sec_${randomHex}`;
+    // 4. Generate ultra-hard 256-bit cryptographic hex token (64 chars)
+    const token = generateCryptoToken();
 
     // 5. Expiry calculation
     const calculatedExpiryHours = Math.max(1, Math.min(Number(expiryHours) || 24, 720)); // between 1 hr and 30 days
@@ -219,7 +225,35 @@ export async function POST(request: NextRequest) {
 
     const viewsAllowed = isOneTime ? 1 : Math.max(1, Number(maxViews) || 1);
 
-    // 7. Save to MongoDB
+    // 7. Domain selection (Multi-Domain Dynamic Cycling)
+    const availableDomains = getShareDomains();
+    let chosenDomain = '';
+
+    if (targetDomain && targetDomain !== 'auto') {
+      const matched = availableDomains.find(
+        (d) =>
+          d.toLowerCase() === targetDomain.toLowerCase() ||
+          formatDomainLabel(d) === formatDomainLabel(targetDomain)
+      );
+      chosenDomain = matched || targetDomain;
+    } else {
+      chosenDomain = getRandomShareDomain();
+    }
+
+    // Fallback if no domain available
+    if (!chosenDomain) {
+      const origin =
+        request.headers.get('origin') ||
+        request.headers.get('host') ||
+        'http://localhost:3000';
+      chosenDomain = origin.startsWith('http') ? origin : `https://${origin}`;
+    }
+
+    chosenDomain = chosenDomain.replace(/\/+$/, '');
+    const shareUrl = `${chosenDomain}/v/${token}`;
+    const domainLabel = formatDomainLabel(chosenDomain);
+
+    // 8. Save to MongoDB
     const shareLink = await ShareLinkModel.create({
       token,
       title: title?.trim() || `Filtered Leads Snapshot (${recordsSnapshot.length} records)`,
@@ -232,30 +266,23 @@ export async function POST(request: NextRequest) {
       expiresAt,
       passcodeHash,
       hasPasscode,
+      domainUsed: domainLabel,
       createdBy: session.name || session.username || 'Administrator',
     });
 
-    // 8. Log activity
+    // 9. Log activity
     await ActivityLogModel.create({
       action: 'Created One-Time Secure Share Link',
-      description: `Generated secure link for ${recordsSnapshot.length} records (Token: ${token.slice(0, 10)}..., Single-Use: ${isOneTime})`,
+      description: `Generated 256-bit crypto link for ${recordsSnapshot.length} records on ${domainLabel} (Single-Use: ${isOneTime})`,
       user: session.name || session.username || 'Administrator',
       type: 'system',
     });
-
-    // 9. Format Origin URL
-    const origin =
-      request.headers.get('origin') ||
-      request.headers.get('host') ||
-      process.env.NEXT_PUBLIC_APP_URL ||
-      'http://localhost:3000';
-    const baseUrl = origin.startsWith('http') ? origin : `https://${origin}`;
-    const shareUrl = `${baseUrl}/share/${token}`;
 
     return NextResponse.json({
       success: true,
       token,
       shareUrl,
+      domainUsed: domainLabel,
       recordCount: recordsSnapshot.length,
       expiresAt: shareLink.expiresAt,
       maxViews: viewsAllowed,
