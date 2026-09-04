@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import SavedFilterModel from '@/lib/models/SavedFilter';
 import ActivityLogModel from '@/lib/models/ActivityLog';
+import { getSessionUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +19,9 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
+    const session = await getSessionUser();
+    const currentUser = session?.name || session?.username || 'Administrator';
+
     const body = await request.json();
     const { name, filters } = body;
 
@@ -34,7 +38,7 @@ export async function POST(request: NextRequest) {
     await ActivityLogModel.create({
       action: 'Saved Filter Created',
       description: `Saved filter preset "${name}"`,
-      user: 'Easin Arafat',
+      user: currentUser,
       type: 'filter',
     });
 

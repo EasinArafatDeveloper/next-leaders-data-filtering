@@ -3,9 +3,20 @@ import connectToDatabase from '@/lib/db';
 import RecordModel from '@/lib/models/Record';
 import DownloadHistoryModel from '@/lib/models/DownloadHistory';
 import ActivityLogModel from '@/lib/models/ActivityLog';
+import { getSessionUser } from '@/lib/auth';
 import Papa from 'papaparse';
 
 export const dynamic = 'force-dynamic';
+
+function sanitizeCsvField(val: any): any {
+  if (typeof val === 'string') {
+    const trimmed = val.trim();
+    if (/^[=\+\-@\t\r]/.test(trimmed)) {
+      return `'${val}`;
+    }
+  }
+  return val ?? '';
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -140,25 +151,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const session = await getSessionUser();
+    const currentUser = session?.name || session?.username || 'Administrator';
+
     const matchingRecords = await RecordModel.find(query).lean();
 
-    // Map records to clean CSV columns
+    // Map records to clean, formula-injection-safe CSV columns
     const csvData = matchingRecords.map((rec: any) => ({
-      ID: rec._id.toString(),
-      Name: rec.name,
-      Phone: rec.phone,
-      Email: rec.email,
-      'Tags / Segments': (rec.tags && rec.tags.length > 0 ? rec.tags.join(', ') : rec.category || ''),
-      Age: rec.age,
-      Gender: rec.gender,
-      'Avatar Type': rec.avatarType || 'With Avatar',
-      'Avatar URL': rec.avatarUrl || '',
+      ID: sanitizeCsvField(rec._id.toString()),
+      Name: sanitizeCsvField(rec.name),
+      Phone: sanitizeCsvField(rec.phone),
+      Email: sanitizeCsvField(rec.email),
+      'Tags / Segments': sanitizeCsvField(rec.tags && rec.tags.length > 0 ? rec.tags.join(', ') : rec.category || ''),
+      Age: rec.age || 0,
+      Gender: sanitizeCsvField(rec.gender),
+      'Avatar Type': sanitizeCsvField(rec.avatarType || 'With Avatar'),
+      'Avatar URL': sanitizeCsvField(rec.avatarUrl || ''),
       'Active Days': rec.activeDays || 0,
       'Last Online': rec.lastActive ? new Date(rec.lastActive).toISOString().split('T')[0] : '',
-      Location: rec.location,
-      Area: rec.area || '',
-      Address: rec.address || '',
-      Status: rec.status,
+      Location: sanitizeCsvField(rec.location),
+      Area: sanitizeCsvField(rec.area || ''),
+      Address: sanitizeCsvField(rec.address || ''),
+      Status: sanitizeCsvField(rec.status),
       'Created At': rec.createdAt ? new Date(rec.createdAt).toISOString().split('T')[0] : '',
     }));
 
@@ -189,7 +203,7 @@ export async function POST(request: NextRequest) {
     await ActivityLogModel.create({
       action: 'CSV Exported',
       description: `Exported ${matchingRecords.length.toLocaleString()} matching records (${filtersAppliedSummary})`,
-      user: 'Easin Arafat',
+      user: currentUser,
       type: 'export',
     });
 

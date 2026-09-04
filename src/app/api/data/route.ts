@@ -4,6 +4,7 @@ import RecordModel from '@/lib/models/Record';
 import DatasetModel from '@/lib/models/Dataset';
 import ActivityLogModel from '@/lib/models/ActivityLog';
 import DownloadHistoryModel from '@/lib/models/DownloadHistory';
+import { getSessionUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -220,6 +221,14 @@ export async function GET(request: NextRequest) {
 
 export async function DELETE() {
   try {
+    const session = await getSessionUser();
+    if (!session || session.role !== 'admin') {
+      return NextResponse.json(
+        { error: 'Unauthorized. Admin privileges required to reset system database.' },
+        { status: 403 }
+      );
+    }
+
     await connectToDatabase();
 
     await RecordModel.deleteMany({});

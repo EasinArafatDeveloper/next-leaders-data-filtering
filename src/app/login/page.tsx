@@ -21,7 +21,11 @@ import { toast } from 'sonner';
 function LoginFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+  const rawCallback = searchParams.get('callbackUrl') || '/dashboard';
+  const callbackUrl =
+    rawCallback.startsWith('/') && !rawCallback.startsWith('//') && !rawCallback.includes(':')
+      ? rawCallback
+      : '/dashboard';
   const { login } = useAuth();
   const { theme, toggleTheme } = useTheme();
 

@@ -1,8 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import connectToDatabase from '@/lib/db';
 import RecordModel from '@/lib/models/Record';
 
 export const dynamic = 'force-dynamic';
+
+function isSafePublicUrl(urlStr: string): boolean {
+  try {
+    const parsed = new URL(urlStr);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+    const hostname = parsed.hostname.toLowerCase();
+    if (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '0.0.0.0' ||
+      hostname === '::1' ||
+      hostname === '169.254.169.254' ||
+      hostname.startsWith('10.') ||
+      hostname.startsWith('192.168.') ||
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)
+    ) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function generateSvgAvatar(name: string, gender: string = 'Other'): string {
   const initial = (name && name.trim() ? name.trim()[0] : 'U').toUpperCase();
@@ -44,7 +68,7 @@ export async function GET(
 ) {
   try {
     const { id } = params;
-    if (!id || id === 'undefined' || id === 'null') {
+    if (!id || id === 'undefined' || id === 'null' || !mongoose.isValidObjectId(id)) {
       const svg = generateSvgAvatar('User');
       return new NextResponse(svg, {
         headers: {
@@ -97,9 +121,9 @@ export async function GET(
       }
     }
 
-    // 3. If there is a remote URL, fetch and permanently cache it into MongoDB
+    // 3. If there is a safe remote URL, fetch and permanently cache it into MongoDB
     const targetUrl = record.avatarOriginalUrl || record.avatarUrl;
-    if (targetUrl && (targetUrl.startsWith('http://') || targetUrl.startsWith('https://'))) {
+    if (targetUrl && isSafePublicUrl(targetUrl)) {
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 6000);
