@@ -27,6 +27,43 @@ export async function createSessionToken(payload: UserSession): Promise<string> 
 }
 
 /**
+ * Creates a signed temporary JWT for 2FA verification challenge (Valid for 5 minutes)
+ */
+export async function create2FAPendingToken(userId: string, username: string): Promise<string> {
+  const secretKey = getSecretKey();
+  return new SignJWT({ userId, username, stage: '2fa_pending' })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('300s') // 5 minutes
+    .sign(secretKey);
+}
+
+/**
+ * Verifies a temporary 2FA pending JWT token
+ */
+export async function verify2FAPendingToken(
+  token: string
+): Promise<{ userId: string; username: string } | null> {
+  try {
+    const secretKey = getSecretKey();
+    const { payload } = await jwtVerify(token, secretKey, {
+      algorithms: ['HS256'],
+    });
+
+    if (payload.stage !== '2fa_pending' || !payload.userId || !payload.username) {
+      return null;
+    }
+
+    return {
+      userId: payload.userId as string,
+      username: payload.username as string,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Verifies a JWT session token (Works in Edge Middleware and Node runtime)
  */
 export async function verifySessionToken(token: string): Promise<UserSession | null> {

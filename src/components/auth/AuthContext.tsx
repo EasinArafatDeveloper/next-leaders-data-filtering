@@ -9,7 +9,22 @@ interface AuthContextType {
   user: UserSession | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (
+    username: string,
+    password: string
+  ) => Promise<{
+    success: boolean;
+    requires2FA?: boolean;
+    twoFactorPendingToken?: string;
+    username?: string;
+    name?: string;
+    error?: string;
+  }>;
+  verify2FA: (
+    twoFactorPendingToken: string,
+    code: string,
+    isBackupCode?: boolean
+  ) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -55,12 +70,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: data.error || 'Authentication failed' };
       }
 
+      if (data.requires2FA) {
+        return {
+          success: true,
+          requires2FA: true,
+          twoFactorPendingToken: data.twoFactorPendingToken,
+          username: data.username,
+          name: data.name,
+        };
+      }
+
       setUser(data.user);
       return { success: true };
     } catch (err: any) {
       return {
         success: false,
         error: err.message || 'An unexpected network error occurred',
+      };
+    }
+  };
+
+  const verify2FA = async (
+    twoFactorPendingToken: string,
+    code: string,
+    isBackupCode: boolean = false
+  ) => {
+    try {
+      const res = await fetch('/api/auth/verify-2fa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ twoFactorPendingToken, code, isBackupCode }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        return { success: false, error: data.error || 'Verification failed' };
+      }
+
+      setUser(data.user);
+      return { success: true };
+    } catch (err: any) {
+      return {
+        success: false,
+        error: err.message || 'An unexpected error occurred during 2FA verification',
       };
     }
   };
@@ -85,6 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         isAuthenticated: !!user,
         login,
+        verify2FA,
         logout,
         refreshUser,
       }}

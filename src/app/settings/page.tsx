@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   User,
   Shield,
@@ -18,6 +18,13 @@ import {
   ShieldCheck,
   Smartphone,
   LogOut,
+  QrCode,
+  Copy,
+  Check,
+  RefreshCw,
+  AlertTriangle,
+  FileText,
+  Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTheme } from '@/components/theme/ThemeProvider';
@@ -25,6 +32,12 @@ import { useAuth } from '@/components/auth/AuthContext';
 import { useRouter } from 'next/navigation';
 
 type SettingsSection = 'profile' | 'security' | 'dataset' | 'export' | 'system';
+
+interface TwoFactorStatus {
+  enabled: boolean;
+  createdAt: string | null;
+  backupCodesCount: number;
+}
 
 export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
@@ -45,6 +58,29 @@ export default function SettingsPage() {
   const [showNew, setShowNew] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
+  // Two-Factor Authentication (2FA) State
+  const [twoFactorStatus, setTwoFactorStatus] = useState<TwoFactorStatus | null>(null);
+  const [isLoading2FAStatus, setIsLoading2FAStatus] = useState(false);
+
+  // 2FA Setup Modal State
+  const [isSetupModalOpen, setIsSetupModalOpen] = useState(false);
+  const [setupStep, setSetupStep] = useState<1 | 2 | 3>(1);
+  const [setupQrCode, setSetupQrCode] = useState('');
+  const [setupSecretKey, setSetupSecretKey] = useState('');
+  const [setupAccountName, setSetupAccountName] = useState('');
+  const [isInitializingSetup, setIsInitializingSetup] = useState(false);
+  const [confirmTotpCode, setConfirmTotpCode] = useState('');
+  const [isConfirming2FA, setIsConfirming2FA] = useState(false);
+  const [generatedBackupCodes, setGeneratedBackupCodes] = useState<string[]>([]);
+  const [hasCopiedSecret, setHasCopiedSecret] = useState(false);
+  const [hasCopiedBackupCodes, setHasCopiedBackupCodes] = useState(false);
+
+  // 2FA Disable Modal State
+  const [isDisableModalOpen, setIsDisableModalOpen] = useState(false);
+  const [disablePassword, setDisablePassword] = useState('');
+  const [disableCode, setDisableCode] = useState('');
+  const [isDisabling2FA, setIsDisabling2FA] = useState(false);
+
   const [archiveStats, setArchiveStats] = useState<{
     totalWithAvatar: number;
     permanentlyArchived: number;
@@ -55,8 +91,26 @@ export default function SettingsPage() {
   const [isArchiving, setIsArchiving] = useState(false);
   const [archiveProgressText, setArchiveProgressText] = useState('');
 
-  // Fetch avatar archive stats when dataset section is opened
-  React.useEffect(() => {
+  // Fetch 2FA status
+  const fetch2FAStatus = async () => {
+    setIsLoading2FAStatus(true);
+    try {
+      const res = await fetch('/api/auth/2fa/status');
+      if (res.ok) {
+        const data = await res.json();
+        setTwoFactorStatus(data);
+      }
+    } catch {
+      // Ignore background fetch error
+    } finally {
+      setIsLoading2FAStatus(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeSection === 'security') {
+      fetch2FAStatus();
+    }
     if (activeSection === 'dataset') {
       fetch('/api/data/archive-avatars')
         .then((res) => (res.ok ? res.json() : null))
@@ -66,6 +120,127 @@ export default function SettingsPage() {
         .catch(() => {});
     }
   }, [activeSection]);
+
+  // Initiate 2FA Setup
+  const handleStartSetup2FA = async () => {
+    setIsInitializingSetup(true);
+    setSetupStep(1);
+    setConfirmTotpCode('');
+    setGeneratedBackupCodes([]);
+    setHasCopiedSecret(false);
+    setHasCopiedBackupCodes(false);
+    setIsSetupModalOpen(true);
+
+    try {
+      const res = await fetch('/api/auth/2fa/setup', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to start 2FA setup');
+
+      setSetupQrCode(data.qrCodeDataUrl);
+      setSetupSecretKey(data.secretKey);
+      setSetupAccountName(data.accountName);
+    } catch (err: any) {
+      toast.error(err.message || 'Could not initialize 2FA setup.');
+      setIsSetupModalOpen(false);
+    } finally {
+      setIsInitializingSetup(false);
+    }
+  };
+
+  // Confirm 2FA with first 6-digit code
+  const handleConfirm2FA = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!confirmTotpCode || confirmTotpCode.length !== 6) {
+      toast.error('Please enter the 6-digit verification code from Google Authenticator.');
+      return;
+    }
+
+    setIsConfirming2FA(true);
+    try {
+      const res = await fetch('/api/auth/2fa/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: confirmTotpCode.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Verification code failed');
+
+      setGeneratedBackupCodes(data.backupCodes || []);
+      setSetupStep(3);
+      toast.success('Two-Factor Authentication is now enabled!');
+      fetch2FAStatus();
+    } catch (err: any) {
+      toast.error(err.message || 'Verification failed. Please check the 6-digit code.');
+    } finally {
+      setIsConfirming2FA(false);
+    }
+  };
+
+  // Disable 2FA
+  const handleDisable2FA = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!disablePassword) {
+      toast.error('Please enter your password to confirm disabling 2FA.');
+      return;
+    }
+
+    setIsDisabling2FA(true);
+    try {
+      const res = await fetch('/api/auth/2fa/disable', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          password: disablePassword,
+          code: disableCode.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to disable 2FA');
+
+      toast.success('Two-Factor Authentication has been disabled.');
+      setIsDisableModalOpen(false);
+      setDisablePassword('');
+      setDisableCode('');
+      fetch2FAStatus();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to disable 2FA.');
+    } finally {
+      setIsDisabling2FA(false);
+    }
+  };
+
+  // Copy secret key
+  const handleCopySecretKey = () => {
+    if (!setupSecretKey) return;
+    navigator.clipboard.writeText(setupSecretKey);
+    setHasCopiedSecret(true);
+    toast.success('Secret key copied to clipboard!');
+    setTimeout(() => setHasCopiedSecret(false), 2000);
+  };
+
+  // Copy all backup codes
+  const handleCopyBackupCodes = () => {
+    if (generatedBackupCodes.length === 0) return;
+    const text = generatedBackupCodes.join('\n');
+    navigator.clipboard.writeText(text);
+    setHasCopiedBackupCodes(true);
+    toast.success('Backup codes copied to clipboard!');
+    setTimeout(() => setHasCopiedBackupCodes(false), 2000);
+  };
+
+  // Download backup codes as .txt file
+  const handleDownloadBackupCodes = () => {
+    if (generatedBackupCodes.length === 0) return;
+    const content = `DATAFLOW ENTERPRISE - EMERGENCY 2FA BACKUP RECOVERY CODES\nGenerated: ${new Date().toLocaleString()}\nAccount: ${user?.username || 'Admin'}\n\n${generatedBackupCodes.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n\n* Keep these recovery codes safe. Each code can only be used once if you lose access to your phone.`;
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `dataflow-2fa-backup-codes-${Date.now()}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Backup codes downloaded as text file.');
+  };
 
   const handleArchiveAllAvatars = async () => {
     setIsArchiving(true);
@@ -89,7 +264,6 @@ export default function SettingsPage() {
           break;
         }
 
-        // Refresh stats
         const statsRes = await fetch('/api/data/archive-avatars');
         if (statsRes.ok) {
           const s = await statsRes.json();
@@ -118,7 +292,7 @@ export default function SettingsPage() {
 
   const sections = [
     { id: 'profile' as SettingsSection, label: 'Profile', icon: User },
-    { id: 'security' as SettingsSection, label: 'Security & Password', icon: Shield },
+    { id: 'security' as SettingsSection, label: 'Security & 2FA', icon: Shield },
     { id: 'dataset' as SettingsSection, label: 'Dataset & Storage', icon: Database },
     { id: 'export' as SettingsSection, label: 'Export', icon: Download },
     { id: 'system' as SettingsSection, label: 'System', icon: Monitor },
@@ -148,13 +322,13 @@ export default function SettingsPage() {
       const res = await fetch('/api/data/seed', { method: 'POST' });
       const data = await res.json();
       if (res.ok) {
-        toast.success('Demo dataset seeded successfully!');
-        setNotification({ type: 'success', msg: `${data.message || '2,123 records imported'}` });
+        toast.success(`Seeded ${data.count} demo records!`);
+        setNotification({ type: 'success', msg: `Seeded ${data.count} demo records across 10 districts.` });
       } else {
-        throw new Error(data.error || 'Seeding failed');
+        throw new Error(data.error || 'Seed failed');
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Seeding failed');
+    } catch {
+      toast.error('Failed to seed dataset');
     } finally {
       setIsSeeding(false);
     }
@@ -167,13 +341,13 @@ export default function SettingsPage() {
       return;
     }
 
-    if (newPassword !== confirmPassword) {
-      toast.error('New password and confirmation do not match');
+    if (newPassword.length < 6) {
+      toast.error('New password must be at least 6 characters');
       return;
     }
 
-    if (newPassword.length < 6) {
-      toast.error('New password must be at least 6 characters');
+    if (newPassword !== confirmPassword) {
+      toast.error('New passwords do not match');
       return;
     }
 
@@ -188,10 +362,10 @@ export default function SettingsPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to update password');
+        throw new Error(data.error || 'Failed to change password');
       }
 
-      toast.success('Password updated successfully! Please use your new password next time.');
+      toast.success('Password changed successfully!');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -208,12 +382,13 @@ export default function SettingsPage() {
 
   const displayName = user?.name || 'Administrator';
   const displayRole = user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Administrator';
-  const initials = displayName
-    .split(' ')
-    .map((n) => n[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase() || 'AD';
+  const initials =
+    displayName
+      .split(' ')
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase() || 'AD';
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-300">
@@ -313,16 +488,95 @@ export default function SettingsPage() {
                   onClick={() => setActiveSection('security')}
                   className="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold shadow-md shadow-brand-600/20 transition-all flex items-center gap-2"
                 >
-                  <Shield className="w-4 h-4" /> Manage Security & Password
+                  <Shield className="w-4 h-4" /> Manage Security & 2FA
                 </button>
               </div>
             </div>
           )}
 
-          {/* Security & Password Section */}
+          {/* Security & 2FA Section */}
           {activeSection === 'security' && (
             <div className="space-y-5">
-              {/* Change Password Card */}
+              {/* 1. GOOGLE AUTHENTICATOR (2FA) CARD */}
+              <div className="p-6 rounded-2xl bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-850 border border-gray-200/90 dark:border-slate-800 shadow-card space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-500/10 to-teal-500/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                      <Smartphone className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+                          Two-Factor Authentication (Google Authenticator)
+                        </h3>
+                        {twoFactorStatus?.enabled ? (
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 font-bold text-[10px] flex items-center gap-1 border border-emerald-200 dark:border-emerald-800">
+                            <CheckCircle2 className="w-3 h-3" /> Active
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-0.5 rounded-full bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400 font-bold text-[10px] border border-gray-200 dark:border-slate-700">
+                            Disabled
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        Require a dynamic 6-digit verification code from your mobile device every time you log in.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="self-start sm:self-center">
+                    {twoFactorStatus?.enabled ? (
+                      <button
+                        type="button"
+                        onClick={() => setIsDisableModalOpen(true)}
+                        className="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 text-xs font-bold transition-all shadow-2xs"
+                      >
+                        Disable 2FA
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleStartSetup2FA}
+                        disabled={isInitializingSetup}
+                        className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition-all flex items-center gap-2 active:scale-95 cursor-pointer"
+                      >
+                        {isInitializingSetup ? (
+                          <>
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            <span>Generating QR...</span>
+                          </>
+                        ) : (
+                          <>
+                            <QrCode className="w-4 h-4" />
+                            <span>Enable Google Authenticator</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {twoFactorStatus?.enabled && (
+                  <div className="p-3.5 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-900/60 text-xs text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>
+                        Your administrator account is protected with RFC 6238 TOTP Two-Factor Authentication.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleStartSetup2FA}
+                      className="text-emerald-700 dark:text-emerald-300 underline font-bold hover:text-emerald-900 transition-colors shrink-0"
+                    >
+                      Re-scan QR / New Device
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* 2. CHANGE PASSWORD CARD */}
               <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-card space-y-6">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -416,7 +670,7 @@ export default function SettingsPage() {
                 </form>
               </div>
 
-              {/* Active Session & Security Details Card */}
+              {/* 3. ACTIVE SESSION & PROTECTIONS CARD */}
               <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-card space-y-4">
                 <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-emerald-600" /> Active Session & Protections
@@ -679,6 +933,7 @@ export default function SettingsPage() {
                 <div className="py-3 px-4 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 space-y-2 text-xs">
                   {[
                     { label: 'Application', value: 'DATAFLOW v1.0.0' },
+                    { label: 'Two-Factor Auth', value: 'RFC 6238 TOTP (Google Authenticator)' },
                     { label: 'Auth Guard', value: 'Next.js Edge Middleware + JWT' },
                     { label: 'Password Encryption', value: 'BCrypt Salt-Rounds 10' },
                     { label: 'Database', value: 'MongoDB Atlas (Mongoose)' },
@@ -696,6 +951,314 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
+
+      {/* 2FA SETUP MODAL WIZARD */}
+      {isSetupModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="p-5 sm:p-6 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between bg-gradient-to-r from-emerald-50/50 to-white dark:from-emerald-950/20 dark:to-slate-900">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900 flex items-center justify-center shrink-0">
+                  <Smartphone className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-base font-bold text-gray-900 dark:text-white">
+                    Setup Google Authenticator (2FA)
+                  </h4>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Step {setupStep} of 3 &bull;{' '}
+                    {setupStep === 1
+                      ? 'Scan QR with Phone'
+                      : setupStep === 2
+                      ? 'Verify 6-Digit Code'
+                      : 'Save Emergency Backup Codes'}
+                  </p>
+                </div>
+              </div>
+
+              {setupStep !== 3 && (
+                <button
+                  type="button"
+                  onClick={() => setIsSetupModalOpen(false)}
+                  className="w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-800 text-gray-500 hover:text-gray-900 dark:hover:text-white flex items-center justify-center text-lg leading-none"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-5">
+              {/* STEP 1: Scan QR Code */}
+              {setupStep === 1 && (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/60 text-xs text-emerald-800 dark:text-emerald-300 space-y-1">
+                    <p className="font-bold flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-emerald-600" /> Instructions:
+                    </p>
+                    <ol className="list-decimal list-inside space-y-0.5 text-[11px] text-emerald-700 dark:text-emerald-300">
+                      <li>Open the <strong>Google Authenticator</strong> app on your mobile phone.</li>
+                      <li>Tap the <strong>+</strong> button and choose <strong>Scan a QR code</strong>.</li>
+                      <li>Point your phone camera at the QR code below.</li>
+                    </ol>
+                  </div>
+
+                  {/* QR Code Container */}
+                  <div className="flex flex-col items-center justify-center py-3">
+                    {setupQrCode ? (
+                      <div className="p-3.5 bg-white rounded-2xl border-2 border-emerald-500/40 shadow-md inline-block">
+                        <img
+                          src={setupQrCode}
+                          alt="Google Authenticator QR Code"
+                          width={190}
+                          height={190}
+                          className="w-44 h-44 object-contain rounded-lg"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-44 h-44 rounded-2xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
+                        <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Manual Key Option */}
+                  <div className="p-3 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400">
+                        Cannot scan QR? Enter text key manually:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleCopySecretKey}
+                        className="text-brand-600 dark:text-brand-400 text-[11px] font-bold flex items-center gap-1 hover:underline"
+                      >
+                        {hasCopiedSecret ? (
+                          <>
+                            <Check className="w-3 h-3 text-emerald-600" /> Copied!
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" /> Copy Key
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <code className="block font-mono text-xs font-bold text-gray-900 dark:text-gray-100 tracking-wider break-all select-all">
+                      {setupSecretKey || 'Loading...'}
+                    </code>
+                  </div>
+
+                  {/* Next Step Button */}
+                  <div className="pt-2 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsSetupModalOpen(false)}
+                      className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-semibold text-gray-600 dark:text-gray-300"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSetupStep(2)}
+                      className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20"
+                    >
+                      Next: Verify 6-Digit Code &rarr;
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 2: Verify Code */}
+              {setupStep === 2 && (
+                <form onSubmit={handleConfirm2FA} className="space-y-4">
+                  <div className="text-center space-y-1">
+                    <h5 className="text-sm font-bold text-gray-900 dark:text-white">
+                      Enter the 6-Digit Code from Phone
+                    </h5>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Check your Google Authenticator app for <strong>DATAFLOW ({setupAccountName})</strong> and enter the 6-digit code:
+                    </p>
+                  </div>
+
+                  <div className="relative max-w-xs mx-auto">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      autoFocus
+                      required
+                      value={confirmTotpCode}
+                      onChange={(e) => setConfirmTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="• • • • • •"
+                      className="w-full text-center tracking-[0.5em] text-2xl font-mono font-bold py-3 px-4 rounded-2xl bg-gray-50 dark:bg-slate-800 border-2 border-emerald-500/50 focus:border-emerald-600 focus:outline-none focus:ring-4 focus:ring-emerald-500/20 text-gray-900 dark:text-white shadow-inner"
+                    />
+                  </div>
+
+                  <div className="pt-3 flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSetupStep(1)}
+                      className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-semibold text-gray-600 dark:text-gray-300"
+                    >
+                      &larr; Back to QR
+                    </button>
+
+                    <button
+                      type="submit"
+                      disabled={confirmTotpCode.length !== 6 || isConfirming2FA}
+                      className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 disabled:opacity-60 flex items-center gap-2 cursor-pointer"
+                    >
+                      {isConfirming2FA ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>Verifying...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Verify & Enable 2FA</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* STEP 3: Emergency Backup Codes */}
+              {setupStep === 3 && (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 space-y-1.5">
+                    <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 font-bold text-xs">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>Save Your Emergency Recovery Backup Codes!</span>
+                    </div>
+                    <p className="text-[11px] text-amber-800 dark:text-amber-300">
+                      If you ever lose your phone or switch devices, each backup code can be used <strong>once</strong> to sign in to your dashboard.
+                    </p>
+                  </div>
+
+                  {/* Backup Codes Grid */}
+                  <div className="p-4 rounded-2xl bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700">
+                    <div className="grid grid-cols-2 gap-2.5 font-mono text-xs font-bold text-gray-800 dark:text-gray-200 text-center">
+                      {generatedBackupCodes.map((code, idx) => (
+                        <div
+                          key={idx}
+                          className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-750 shadow-2xs select-all"
+                        >
+                          <span className="text-gray-400 text-[10px] mr-1">{idx + 1}.</span>
+                          {code}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-between gap-2 flex-wrap pt-1">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleCopyBackupCodes}
+                        className="px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 flex items-center gap-1.5 shadow-2xs"
+                      >
+                        {hasCopiedBackupCodes ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{hasCopiedBackupCodes ? 'Copied!' : 'Copy All'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleDownloadBackupCodes}
+                        className="px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 flex items-center gap-1.5 shadow-2xs"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Download (.txt)</span>
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsSetupModalOpen(false)}
+                      className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20"
+                    >
+                      Done & Close
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2FA DISABLE CONFIRMATION MODAL */}
+      {isDisableModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-2xl overflow-hidden p-6 space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-gray-900 dark:text-white">
+                  Disable Two-Factor Authentication?
+                </h4>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  This will remove the phone verification step from login.
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleDisable2FA} className="space-y-3.5">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-500 uppercase">
+                  Current Account Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={disablePassword}
+                  onChange={(e) => setDisablePassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-500 uppercase">
+                  Google Authenticator Code (Optional)
+                </label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={disableCode}
+                  onChange={(e) => setDisableCode(e.target.value.replace(/\D/g, ''))}
+                  placeholder="6-digit code (if available)"
+                  className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-sm text-gray-900 dark:text-gray-100 focus:outline-none font-mono"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsDisableModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-semibold text-gray-600 dark:text-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isDisabling2FA}
+                  className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md shadow-rose-600/20 disabled:opacity-60 flex items-center gap-2"
+                >
+                  {isDisabling2FA ? 'Disabling...' : 'Confirm & Disable 2FA'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

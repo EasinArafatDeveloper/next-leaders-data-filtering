@@ -9,6 +9,11 @@ export interface IUserDocument extends Document {
   failedLoginAttempts: number;
   lockUntil?: Date | null;
   lastLoginAt?: Date;
+  twoFactorEnabled?: boolean;
+  twoFactorSecret?: string | null;
+  twoFactorTempSecret?: string | null;
+  twoFactorBackupCodes?: string[];
+  twoFactorCreatedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -52,6 +57,26 @@ const UserSchema: Schema = new Schema(
       default: null,
     },
     lastLoginAt: {
+      type: Date,
+      default: null,
+    },
+    twoFactorEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    twoFactorSecret: {
+      type: String,
+      default: null,
+    },
+    twoFactorTempSecret: {
+      type: String,
+      default: null,
+    },
+    twoFactorBackupCodes: {
+      type: [String],
+      default: [],
+    },
+    twoFactorCreatedAt: {
       type: Date,
       default: null,
     },

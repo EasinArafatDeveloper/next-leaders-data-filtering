@@ -3,6 +3,7 @@ import connectToDatabase from '@/lib/db';
 import UserModel from '@/lib/models/User';
 import {
   createSessionToken,
+  create2FAPendingToken,
   ensureDefaultAdmin,
   hashPassword,
   logAuthActivity,
@@ -83,6 +84,28 @@ export async function POST(req: NextRequest) {
       );
 
       return NextResponse.json({ error: lockMessage }, { status: 401 });
+    }
+
+    // If Two-Factor Authentication is enabled, issue temporary 2FA challenge
+    if (user.twoFactorEnabled) {
+      const twoFactorPendingToken = await create2FAPendingToken(
+        user._id.toString(),
+        user.username
+      );
+
+      await logAuthActivity(
+        '2FA Challenge Prompted',
+        `2FA verification code requested for user: ${user.username}`,
+        user.name
+      );
+
+      return NextResponse.json({
+        requires2FA: true,
+        twoFactorPendingToken,
+        username: user.username,
+        name: user.name,
+        message: 'Please enter the 6-digit verification code from Google Authenticator.',
+      });
     }
 
     // Login successful - Reset locks & update last login
