@@ -4,6 +4,7 @@ import RecordModel from '@/lib/models/Record';
 import DownloadHistoryModel from '@/lib/models/DownloadHistory';
 import ActivityLogModel from '@/lib/models/ActivityLog';
 import { getSessionUser } from '@/lib/auth';
+import { buildPhonePrefixRegex } from '@/lib/phone';
 import Papa from 'papaparse';
 
 export const dynamic = 'force-dynamic';
@@ -116,6 +117,9 @@ export async function POST(request: NextRequest) {
           { tags: tagRegex },
           { category: tagRegex },
           { 'customFields.Tag / Label': tagRegex },
+          { 'customFields.Tags / Labels': tagRegex },
+          { 'customFields.tag': tagRegex },
+          { 'customFields.tags': tagRegex },
         ],
       });
     }
@@ -129,8 +133,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (numberStartsWith && numberStartsWith.trim()) {
-      const prefixClean = numberStartsWith.trim().replace(/[+]/g, '');
-      query.phone = { $regex: `^(\\+)?${prefixClean}` };
+      const prefixRegexStr = buildPhonePrefixRegex(numberStartsWith);
+      if (prefixRegexStr) {
+        query.phone = { $regex: prefixRegexStr };
+      }
     }
 
     if (maxActiveDays && !isNaN(parseInt(maxActiveDays, 10))) {

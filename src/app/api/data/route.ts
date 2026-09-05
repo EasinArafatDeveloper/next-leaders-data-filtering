@@ -5,6 +5,7 @@ import DatasetModel from '@/lib/models/Dataset';
 import ActivityLogModel from '@/lib/models/ActivityLog';
 import DownloadHistoryModel from '@/lib/models/DownloadHistory';
 import { getSessionUser } from '@/lib/auth';
+import { buildPhonePrefixRegex } from '@/lib/phone';
 
 export const dynamic = 'force-dynamic';
 
@@ -99,6 +100,9 @@ export async function GET(request: NextRequest) {
           { category: searchRegex },
           { 'customFields.nickname': searchRegex },
           { 'customFields.Tag / Label': searchRegex },
+          { 'customFields.Tags / Labels': searchRegex },
+          { 'customFields.tag': searchRegex },
+          { 'customFields.tags': searchRegex },
         ];
 
         if (cleanPhoneSearch && /\d/.test(cleanPhoneSearch)) {
@@ -123,6 +127,9 @@ export async function GET(request: NextRequest) {
           { tags: tagRegex },
           { category: tagRegex },
           { 'customFields.Tag / Label': tagRegex },
+          { 'customFields.Tags / Labels': tagRegex },
+          { 'customFields.tag': tagRegex },
+          { 'customFields.tags': tagRegex },
         ],
       });
     }
@@ -144,10 +151,12 @@ export async function GET(request: NextRequest) {
       if (maxAge) query.age.$lte = parseInt(maxAge, 10);
     }
 
-    // 5. Number starts with (e.g. 88017)
-    if (numberStartsWith.trim()) {
-      const prefixClean = numberStartsWith.trim().replace(/[+]/g, '');
-      query.phone = { $regex: `^(\\+)?${prefixClean}` };
+    // 5. Number starts with (e.g. 88017 / 017 / 88018 / 018)
+    if (numberStartsWith && numberStartsWith.trim()) {
+      const prefixRegexStr = buildPhonePrefixRegex(numberStartsWith);
+      if (prefixRegexStr) {
+        query.phone = { $regex: prefixRegexStr };
+      }
     }
 
     // 6. Active days <=

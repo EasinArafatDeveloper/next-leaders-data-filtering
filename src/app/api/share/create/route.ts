@@ -11,6 +11,7 @@ import {
   getShareDomains,
   formatDomainLabel,
 } from '@/lib/config/domains';
+import { buildPhonePrefixRegex } from '@/lib/phone';
 
 export const dynamic = 'force-dynamic';
 
@@ -157,6 +158,9 @@ export async function POST(request: NextRequest) {
             { category: searchRegex },
             { 'customFields.nickname': searchRegex },
             { 'customFields.Tag / Label': searchRegex },
+            { 'customFields.Tags / Labels': searchRegex },
+            { 'customFields.tag': searchRegex },
+            { 'customFields.tags': searchRegex },
           ];
           if (cleanPhoneSearch && /\d/.test(cleanPhoneSearch)) {
             orConditions.push({ phone: new RegExp(cleanPhoneSearch, 'i') });
@@ -170,7 +174,14 @@ export async function POST(request: NextRequest) {
         const tagRegex = new RegExp(`^${tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
         query.$and = query.$and || [];
         query.$and.push({
-          $or: [{ tags: tagRegex }, { category: tagRegex }, { 'customFields.Tag / Label': tagRegex }],
+          $or: [
+            { tags: tagRegex },
+            { category: tagRegex },
+            { 'customFields.Tag / Label': tagRegex },
+            { 'customFields.Tags / Labels': tagRegex },
+            { 'customFields.tag': tagRegex },
+            { 'customFields.tags': tagRegex },
+          ],
         });
       }
       if (gender && gender !== 'All') query.gender = gender;
@@ -183,8 +194,10 @@ export async function POST(request: NextRequest) {
       }
 
       if (numberStartsWith && numberStartsWith.trim()) {
-        const prefixClean = numberStartsWith.trim().replace(/[+]/g, '');
-        query.phone = { $regex: `^(\\+)?${prefixClean}` };
+        const prefixRegexStr = buildPhonePrefixRegex(numberStartsWith);
+        if (prefixRegexStr) {
+          query.phone = { $regex: prefixRegexStr };
+        }
       }
 
       if (maxActiveDays && !isNaN(parseInt(maxActiveDays, 10))) {
