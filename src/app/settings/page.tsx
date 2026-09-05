@@ -750,9 +750,6 @@ export default function SettingsPage() {
                           <Radio className="w-4 h-4 text-emerald-500 animate-pulse" />
                           Authorized 2FA Devices & Team Phones ({connectedDevices.length})
                         </h4>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          Both your phone and your boss&apos;s phone generate synchronized 6-digit codes simultaneously.
-                        </p>
                       </div>
 
                       <button
