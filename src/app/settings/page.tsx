@@ -744,13 +744,13 @@ export default function SettingsPage() {
                 {/* 2FA DEVICES LIST & MULTI-PHONE MANAGER */}
                 {twoFactorStatus?.enabled && (
                   <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-50 to-emerald-50/30 dark:from-slate-850 dark:to-emerald-950/20 border border-gray-200/80 dark:border-slate-800 space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
-                        <h4 className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                          <Radio className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
+                        <h4 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                          <Radio className="w-4 h-4 text-emerald-500 animate-pulse" />
                           Authorized 2FA Devices & Team Phones ({connectedDevices.length})
                         </h4>
-                        <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                           Both your phone and your boss&apos;s phone generate synchronized 6-digit codes simultaneously.
                         </p>
                       </div>
@@ -763,47 +763,57 @@ export default function SettingsPage() {
                           setDeviceTypeInput('iphone');
                           setIsDeviceModalOpen(true);
                         }}
-                        className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-brand-600 dark:text-brand-400 text-xs font-bold hover:bg-brand-50 transition-all flex items-center gap-1.5 shadow-2xs self-start sm:self-center"
+                        className="px-4 py-2 rounded-xl bg-white dark:bg-slate-800 border border-brand-200 dark:border-brand-900 text-brand-600 dark:text-brand-400 text-xs font-bold hover:bg-brand-50 dark:hover:bg-brand-950/60 transition-all flex items-center gap-1.5 shadow-2xs whitespace-nowrap shrink-0 self-start sm:self-center cursor-pointer"
                       >
-                        <Plus className="w-3.5 h-3.5" />
+                        <Plus className="w-4 h-4" />
                         <span>Add Phone Label</span>
                       </button>
                     </div>
 
-                    {/* Devices Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    {/* Devices List (Full Width Rows - No Cramping) */}
+                    <div className="flex flex-col gap-3 pt-1">
                       {connectedDevices.map((dev) => (
                         <div
                           key={dev.id}
-                          className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200/90 dark:border-slate-800 shadow-sm flex items-center justify-between gap-3 hover:border-emerald-400 dark:hover:border-emerald-700 transition-all"
+                          className="p-4 sm:p-4.5 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200/90 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 hover:border-emerald-400 dark:hover:border-emerald-700 transition-all"
                         >
                           {/* Left Details */}
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-900/80 flex items-center justify-center shrink-0 shadow-2xs">
+                          <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                            <div className="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-900/80 flex items-center justify-center shrink-0 shadow-2xs">
                               {dev.deviceType === 'desktop' ? (
                                 <Laptop className="w-5 h-5 shrink-0" />
                               ) : (
                                 <Smartphone className="w-5 h-5 shrink-0" />
                               )}
                             </div>
-                            <div className="min-w-0 flex-1">
-                              <h5 className="text-xs font-bold text-gray-900 dark:text-white truncate">
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <h5 className="text-sm font-bold text-gray-900 dark:text-white">
                                 {dev.name}
                               </h5>
-                              <div className="flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                                <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
-                                  <CheckCheck className="w-3.5 h-3.5 shrink-0" /> Synchronized
+                              <div className="flex items-center flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400">
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-semibold text-[11px] border border-emerald-200/60 dark:border-emerald-900/60">
+                                  <CheckCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                  <span>Synchronized & Active</span>
                                 </span>
-                                <span>&bull;</span>
-                                <span className="uppercase text-[10px] font-mono tracking-wider font-semibold">
-                                  {dev.deviceType}
+                                <span className="px-2 py-0.5 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 text-[10px] font-mono font-bold uppercase tracking-wider">
+                                  {dev.deviceType === 'iphone' ? '📱 Apple iPhone' : dev.deviceType === 'android' ? '📱 Android Phone' : dev.deviceType === 'desktop' ? '💻 Workstation' : '📱 Mobile Device'}
                                 </span>
                               </div>
                             </div>
                           </div>
 
                           {/* Right Action Buttons */}
-                          <div className="flex items-center gap-1.5 shrink-0">
+                          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenShareQr(dev)}
+                              className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 flex items-center gap-1.5 text-xs font-bold transition-colors shadow-2xs shrink-0 cursor-pointer"
+                              title="Show QR Code to link this phone"
+                            >
+                              <QrCode className="w-4 h-4 shrink-0" />
+                              <span>Show QR</span>
+                            </button>
+
                             <button
                               type="button"
                               onClick={() => {
@@ -812,26 +822,18 @@ export default function SettingsPage() {
                                 setDeviceTypeInput(dev.deviceType);
                                 setIsDeviceModalOpen(true);
                               }}
-                              className="w-8 h-8 rounded-xl bg-gray-50 hover:bg-brand-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-600 hover:text-brand-600 dark:text-gray-300 dark:hover:text-brand-400 border border-gray-200 dark:border-slate-700 flex items-center justify-center transition-colors shadow-2xs shrink-0 cursor-pointer"
+                              className="px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-700 flex items-center gap-1.5 text-xs font-semibold transition-colors shadow-2xs shrink-0 cursor-pointer"
                               title="Rename Device"
                             >
-                              <Edit2 className="w-4 h-4 shrink-0" />
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => handleOpenShareQr(dev)}
-                              className="w-8 h-8 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 flex items-center justify-center transition-colors shadow-2xs shrink-0 cursor-pointer"
-                              title="Show QR Code to link this phone"
-                            >
-                              <QrCode className="w-4 h-4 shrink-0" />
+                              <Edit2 className="w-3.5 h-3.5 shrink-0 text-gray-500" />
+                              <span>Rename</span>
                             </button>
 
                             {connectedDevices.length > 1 && (
                               <button
                                 type="button"
                                 onClick={() => handleRemoveDevice(dev)}
-                                className="w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900 flex items-center justify-center transition-colors shadow-2xs shrink-0 cursor-pointer"
+                                className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900 flex items-center justify-center transition-colors shadow-2xs shrink-0 cursor-pointer"
                                 title="Remove Phone Label"
                               >
                                 <Trash2 className="w-4 h-4 shrink-0" />
