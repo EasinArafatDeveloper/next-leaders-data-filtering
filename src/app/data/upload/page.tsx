@@ -114,7 +114,7 @@ export default function UploadDataPage() {
           />
 
           {/* Smart Merge Feature Highlight */}
-          <div className="p-5 rounded-2xl bg-gradient-to-r from-brand-50/80 to-indigo-50/60 dark:from-brand-950/40 dark:to-indigo-950/30 border border-brand-200/80 dark:border-brand-900/60 shadow-sm flex items-start gap-3.5">
+          <div className="p-5 rounded-2xl bg-gradient-to-r from-brand-50/80 to-accent-50/60 dark:from-brand-950/40 dark:to-accent-950/30 border border-brand-200/80 dark:border-brand-900/60 shadow-sm flex items-start gap-3.5">
             <div className="p-2.5 rounded-xl bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-300 shrink-0">
               <RefreshCw className="w-4 h-4" />
             </div>

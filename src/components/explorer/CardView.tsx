@@ -69,7 +69,7 @@ function UserAvatar({ record }: { record: IRecord }) {
   }
 
   return (
-    <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 text-white font-bold text-xs flex items-center justify-center shadow-md shadow-brand-500/20 shrink-0">
+    <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-brand-600 to-accent-500 text-white font-bold text-xs flex items-center justify-center shadow-md shadow-brand-500/20 shrink-0">
       {initials}
     </div>
   );

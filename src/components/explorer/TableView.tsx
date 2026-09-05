@@ -62,7 +62,7 @@ function TableAvatar({ record }: { record: IRecord }) {
   }
 
   return (
-    <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-indigo-500 text-white font-bold text-[10px] flex items-center justify-center shrink-0">
+    <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-accent-500 text-white font-bold text-[10px] flex items-center justify-center shrink-0">
       {initials}
     </div>
   );

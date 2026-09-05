@@ -17,7 +17,7 @@ export function DatasetSummaryCard({ dataset, onSeedDemo, isSeeding }: DatasetSu
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         {/* Left Dataset Header Info */}
         <div className="flex items-start space-x-4">
-          <div className="p-3.5 rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-500 text-white shadow-md shadow-brand-500/20 shrink-0">
+          <div className="p-3.5 rounded-2xl bg-gradient-to-tr from-brand-600 to-accent-500 text-white shadow-md shadow-brand-500/20 shrink-0">
             <FileSpreadsheet className="w-6 h-6" />
           </div>
           <div>

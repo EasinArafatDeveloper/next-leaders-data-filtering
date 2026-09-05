@@ -27,6 +27,19 @@ module.exports = {
           900: 'var(--brand-900, #312E81)',
           950: 'var(--brand-950, #1E1B4B)',
         },
+        accent: {
+          50: 'var(--brand-accent-50, #F5F3FF)',
+          100: 'var(--brand-accent-100, #EDE9FE)',
+          200: 'var(--brand-accent-200, #DDD6FE)',
+          300: 'var(--brand-accent-300, #C4B5FD)',
+          400: 'var(--brand-accent-400, #A78BFA)',
+          500: 'var(--brand-accent-500, #8B5CF6)',
+          600: 'var(--brand-accent-600, #7C3AED)',
+          700: 'var(--brand-accent-700, #6D28D9)',
+          800: 'var(--brand-accent-800, #5B21B6)',
+          900: 'var(--brand-accent-900, #4C1D95)',
+          950: 'var(--brand-accent-950, #2E1065)',
+        },
         surface: {
           light: '#FFFFFF',
           dark: '#111827',
@@ -36,13 +49,20 @@ module.exports = {
           borderDark: '#1F2937',
         }
       },
+      backgroundImage: {
+        'gradient-brand': 'linear-gradient(135deg, var(--brand-600, #4F46E5) 0%, var(--brand-accent-500, #8B5CF6) 100%)',
+        'gradient-brand-hover': 'linear-gradient(135deg, var(--brand-700, #4338CA) 0%, var(--brand-accent-600, #7C3AED) 100%)',
+        'gradient-brand-subtle': 'linear-gradient(135deg, var(--brand-50, #EEF2FF) 0%, var(--brand-accent-50, #F5F3FF) 100%)',
+        'gradient-brand-subtle-dark': 'linear-gradient(135deg, var(--brand-950, #1E1B4B) 0%, var(--brand-accent-950, #2E1065) 100%)',
+      },
       fontFamily: {
         sans: ['Inter', 'Plus Jakarta Sans', 'sans-serif'],
       },
       boxShadow: {
         card: '0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03)',
-        cardHover: '0 10px 25px -5px rgba(79, 70, 229, 0.1), 0 8px 10px -6px rgba(79, 70, 229, 0.05)',
-        glow: '0 0 20px -5px rgba(79, 70, 229, 0.4)',
+        cardHover: '0 10px 25px -5px rgba(var(--brand-glow-rgb, 79, 70, 229), 0.12), 0 8px 10px -6px rgba(var(--brand-glow-rgb, 79, 70, 229), 0.06)',
+        glow: '0 0 25px -3px rgba(var(--brand-glow-rgb, 79, 70, 229), 0.45)',
+        brand: '0 4px 14px 0 rgba(var(--brand-glow-rgb, 79, 70, 229), 0.35)',
       },
     },
   },

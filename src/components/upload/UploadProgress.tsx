@@ -38,7 +38,7 @@ export function UploadProgress({ currentStage }: UploadProgressProps) {
       {/* Progress Bar */}
       <div className="w-full bg-gray-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
         <motion.div
-          className="bg-gradient-to-r from-brand-600 to-indigo-500 h-full rounded-full"
+          className="bg-gradient-to-r from-brand-600 to-accent-500 h-full rounded-full"
           initial={{ width: 0 }}
           animate={{ width: `${percentage}%` }}
           transition={{ duration: 0.3 }}

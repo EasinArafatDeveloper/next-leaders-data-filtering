@@ -247,7 +247,7 @@ export function FilterToolbar({
               <button
                 type="button"
                 onClick={onShareLink}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md shadow-brand-600/20 transition-all active:scale-[0.98] whitespace-nowrap"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-accent-500 hover:from-brand-700 hover:to-accent-600 text-white font-bold text-xs shadow-md shadow-brand-600/20 transition-all active:scale-[0.98] whitespace-nowrap cursor-pointer"
                 title="Generate a secure one-time link with anti-screenshot protection"
               >
                 <Lock className="w-3.5 h-3.5 text-brand-200" />

@@ -160,7 +160,7 @@ export function Sidebar({
                       {isActive && !collapsed && (
                         <motion.div
                           layoutId="activeNavIndicator"
-                          className="absolute left-0 w-1 h-5 bg-brand-600 dark:bg-brand-500 rounded-r-full"
+                          className="absolute left-0 w-1.5 h-6 bg-gradient-to-b from-brand-600 to-accent-500 rounded-r-full shadow-sm shadow-brand-500/30"
                           transition={{ type: 'spring', stiffness: 350, damping: 30 }}
                         />
                       )}

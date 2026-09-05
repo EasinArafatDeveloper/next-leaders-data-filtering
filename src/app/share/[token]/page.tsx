@@ -502,7 +502,7 @@ export default function SecureSharePage({ params }: { params: { token: string } 
             <button
               type="submit"
               disabled={isUnlocking}
-              className="w-full py-3 rounded-2xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-brand-600/20 transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+              className="w-full py-3 rounded-2xl bg-gradient-to-r from-brand-600 to-accent-500 hover:from-brand-700 hover:to-accent-600 text-white font-bold text-xs shadow-lg shadow-brand-600/20 transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
             >
               {isUnlocking ? 'Unlocking...' : 'Unlock & View Contacts'}
             </button>
@@ -599,7 +599,7 @@ export default function SecureSharePage({ params }: { params: { token: string } 
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-600 text-white shadow-md shadow-brand-600/20">
+            <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-brand-600 to-accent-500 text-white shadow-md shadow-brand-600/20">
               <Lock className="w-5 h-5" />
             </div>
             <div>
@@ -740,7 +740,7 @@ export default function SecureSharePage({ params }: { params: { token: string } 
                             className="w-11 h-11 rounded-2xl object-cover border border-gray-200 shrink-0 shadow-xs"
                           />
                         ) : (
-                          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-600 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-sm shadow-brand-600/20">
+                          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-brand-600 to-accent-500 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-sm shadow-brand-600/20">
                             {record.name ? record.name.slice(0, 2).toUpperCase() : 'U'}
                           </div>
                         )}

@@ -146,7 +146,7 @@ export function ShareLinkModal({
             className="relative z-10 w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl border border-gray-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
           >
             {/* Header */}
-            <div className="p-5 sm:p-6 bg-gradient-to-r from-brand-600 via-indigo-600 to-purple-600 text-white flex items-center justify-between">
+            <div className="p-5 sm:p-6 bg-gradient-to-r from-brand-600 to-accent-600 text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-2xl bg-white/20 backdrop-blur-md text-white shadow-inner">
                   <Lock className="w-5 h-5" />
@@ -467,7 +467,7 @@ export function ShareLinkModal({
                     type="button"
                     onClick={handleGenerate}
                     disabled={isGenerating || totalFilteredCount === 0}
-                    className="flex-1 py-2.5 px-5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md shadow-brand-600/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+                    className="flex-1 py-2.5 px-5 rounded-xl bg-gradient-to-r from-brand-600 to-accent-600 hover:from-brand-700 hover:to-accent-700 text-white font-bold text-xs shadow-md shadow-brand-600/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
                   >
                     {isGenerating ? (
                       <span>Generating Link...</span>

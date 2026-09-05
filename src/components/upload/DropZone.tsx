@@ -445,7 +445,7 @@ export function DropZone({ onFileParsed, isProcessing }: DropZoneProps) {
           className="hidden"
         />
 
-        <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-500 text-white flex items-center justify-center shadow-lg shadow-brand-500/25 mb-4">
+        <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-600 to-accent-500 text-white flex items-center justify-center shadow-lg shadow-brand-500/25 mb-4">
           <UploadCloud className="w-8 h-8" />
         </div>
 
@@ -595,7 +595,7 @@ export function DropZone({ onFileParsed, isProcessing }: DropZoneProps) {
           )}
 
           {/* 4. MULTI-TAG & BATCH LABEL MANAGER */}
-          <div className="p-5 rounded-2xl bg-gradient-to-br from-brand-50/60 to-indigo-50/40 dark:from-brand-950/30 dark:to-indigo-950/20 border border-brand-200/80 dark:border-brand-900/60 space-y-4">
+          <div className="p-5 rounded-2xl bg-gradient-to-br from-brand-50/60 to-accent-50/40 dark:from-brand-950/30 dark:to-accent-950/20 border border-brand-200/80 dark:border-brand-900/60 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <label className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">

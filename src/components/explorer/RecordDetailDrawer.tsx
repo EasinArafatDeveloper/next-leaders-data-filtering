@@ -103,7 +103,7 @@ export function RecordDetailDrawer({ record, onClose }: RecordDetailDrawerProps)
                 />
               </div>
             ) : (
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-500 text-white font-bold text-base flex items-center justify-center shadow-md shadow-brand-500/20 shrink-0">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 to-accent-500 text-white font-bold text-base flex items-center justify-center shadow-md shadow-brand-500/20 shrink-0">
                 {initials}
               </div>
             )}

@@ -623,7 +623,7 @@ export default function SettingsPage() {
               </h3>
 
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-500 text-white font-bold text-xl flex items-center justify-center shadow-md shadow-brand-500/20">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-600 to-accent-500 text-white font-bold text-xl flex items-center justify-center shadow-md shadow-brand-500/20">
                   {initials}
                 </div>
                 <div>
@@ -977,7 +977,7 @@ export default function SettingsPage() {
           {activeSection === 'dataset' && (
             <div className="space-y-6">
               {/* Permanent Avatar Archiver & Local Backup Card */}
-              <div className="p-7 rounded-3xl bg-gradient-to-br from-indigo-50/70 to-brand-50/50 dark:from-slate-900 dark:to-indigo-950/20 border border-brand-200/80 dark:border-brand-900/60 shadow-card space-y-5">
+              <div className="p-7 rounded-3xl bg-gradient-to-br from-brand-50/70 to-accent-50/50 dark:from-slate-900 dark:to-accent-950/20 border border-brand-200/80 dark:border-brand-900/60 shadow-card space-y-5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -1009,7 +1009,7 @@ export default function SettingsPage() {
                   <div className="space-y-2">
                     <div className="w-full h-2.5 rounded-full bg-gray-200 dark:bg-slate-800 overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-brand-600 to-indigo-500 transition-all duration-500 rounded-full"
+                        className="h-full bg-gradient-to-r from-brand-600 to-accent-500 transition-all duration-500 rounded-full"
                         style={{ width: `${Math.max(5, archiveStats.percentage)}%` }}
                       />
                     </div>

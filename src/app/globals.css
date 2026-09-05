@@ -12,7 +12,7 @@
     --text-secondary: #475569;
     --text-muted: #94A3B8;
 
-    /* Theme: Royal Indigo (Default) */
+    /* Theme 1: Royal Indigo (Default) */
     --brand-50: #EEF2FF;
     --brand-100: #E0E7FF;
     --brand-200: #C7D2FE;
@@ -24,19 +24,72 @@
     --brand-800: #3730A3;
     --brand-900: #312E81;
     --brand-950: #1E1B4B;
+
+    --brand-accent-50: #F5F3FF;
+    --brand-accent-100: #EDE9FE;
+    --brand-accent-200: #DDD6FE;
+    --brand-accent-300: #C4B5FD;
+    --brand-accent-400: #A78BFA;
+    --brand-accent-500: #8B5CF6;
+    --brand-accent-600: #7C3AED;
+    --brand-accent-700: #6D28D9;
+    --brand-accent-800: #5B21B6;
+    --brand-accent-900: #4C1D95;
+    --brand-accent-950: #2E1065;
+
+    --brand-glow-rgb: 79, 70, 229;
+    --bg-ambient-1: rgba(99, 102, 241, 0.08);
+    --bg-ambient-2: rgba(139, 92, 246, 0.08);
   }
 
   .dark {
-    --bg-main: #090D16;
-    --bg-surface: #0F172A;
-    --bg-sidebar: #0F172A;
-    --border-color: #1E293B;
+    --bg-main: #080C14;
+    --bg-surface: #0E1320;
+    --bg-sidebar: #0C101B;
+    --border-color: #1A2234;
     --text-primary: #F8FAFC;
     --text-secondary: #94A3B8;
     --text-muted: #64748B;
+    --bg-ambient-1: rgba(79, 70, 229, 0.12);
+    --bg-ambient-2: rgba(139, 92, 246, 0.10);
   }
 
-  /* THEME PRESET: CYBER EMERALD (Green Matrix) */
+  /* THEME 1: ROYAL INDIGO */
+  .theme-indigo {
+    --brand-50: #EEF2FF;
+    --brand-100: #E0E7FF;
+    --brand-200: #C7D2FE;
+    --brand-300: #A5B4FC;
+    --brand-400: #818CF8;
+    --brand-500: #6366F1;
+    --brand-600: #4F46E5;
+    --brand-700: #4338CA;
+    --brand-800: #3730A3;
+    --brand-900: #312E81;
+    --brand-950: #1E1B4B;
+
+    --brand-accent-50: #F5F3FF;
+    --brand-accent-100: #EDE9FE;
+    --brand-accent-200: #DDD6FE;
+    --brand-accent-300: #C4B5FD;
+    --brand-accent-400: #A78BFA;
+    --brand-accent-500: #8B5CF6;
+    --brand-accent-600: #7C3AED;
+    --brand-accent-700: #6D28D9;
+    --brand-accent-800: #5B21B6;
+    --brand-accent-900: #4C1D95;
+    --brand-accent-950: #2E1065;
+
+    --brand-glow-rgb: 79, 70, 229;
+    --bg-ambient-1: rgba(99, 102, 241, 0.08);
+    --bg-ambient-2: rgba(139, 92, 246, 0.08);
+  }
+  .dark.theme-indigo, .dark .theme-indigo {
+    --bg-ambient-1: rgba(79, 70, 229, 0.12);
+    --bg-ambient-2: rgba(139, 92, 246, 0.10);
+  }
+
+  /* THEME 2: CYBER EMERALD (High-Tech Matrix Green & Teal) */
   .theme-emerald {
     --brand-50: #ECFDF5;
     --brand-100: #D1FAE5;
@@ -49,9 +102,29 @@
     --brand-800: #065F46;
     --brand-900: #064E3B;
     --brand-950: #022C22;
+
+    --brand-accent-50: #F0FDFA;
+    --brand-accent-100: #CCFBF1;
+    --brand-accent-200: #99F6E4;
+    --brand-accent-300: #5EEAD4;
+    --brand-accent-400: #2DD4BF;
+    --brand-accent-500: #14B8A6;
+    --brand-accent-600: #0D9488;
+    --brand-accent-700: #0F766E;
+    --brand-accent-800: #115E59;
+    --brand-accent-900: #134E4A;
+    --brand-accent-950: #042F2E;
+
+    --brand-glow-rgb: 5, 150, 105;
+    --bg-ambient-1: rgba(16, 185, 129, 0.08);
+    --bg-ambient-2: rgba(20, 184, 166, 0.08);
+  }
+  .dark.theme-emerald, .dark .theme-emerald {
+    --bg-ambient-1: rgba(5, 150, 105, 0.13);
+    --bg-ambient-2: rgba(13, 148, 136, 0.10);
   }
 
-  /* THEME PRESET: NEON CYBERPUNK (Electric Fuchsia & Violet) */
+  /* THEME 3: NEON CYBERPUNK (Electric Fuchsia & Pink Luxe) */
   .theme-cyberpunk {
     --brand-50: #FDF4FF;
     --brand-100: #FAE8FF;
@@ -64,9 +137,29 @@
     --brand-800: #86198F;
     --brand-900: #701A75;
     --brand-950: #4A044E;
+
+    --brand-accent-50: #FFF1F2;
+    --brand-accent-100: #FFE4E6;
+    --brand-accent-200: #FECDD3;
+    --brand-accent-300: #FDA4AF;
+    --brand-accent-400: #FB7185;
+    --brand-accent-500: #F43F5E;
+    --brand-accent-600: #E11D48;
+    --brand-accent-700: #BE123C;
+    --brand-accent-800: #9F1239;
+    --brand-accent-900: #881337;
+    --brand-accent-950: #4C0519;
+
+    --brand-glow-rgb: 192, 38, 211;
+    --bg-ambient-1: rgba(217, 70, 239, 0.09);
+    --bg-ambient-2: rgba(244, 63, 94, 0.08);
+  }
+  .dark.theme-cyberpunk, .dark .theme-cyberpunk {
+    --bg-ambient-1: rgba(192, 38, 211, 0.13);
+    --bg-ambient-2: rgba(225, 29, 72, 0.10);
   }
 
-  /* THEME PRESET: OCEAN SAPPHIRE (Electric Cyan & Blue) */
+  /* THEME 4: OCEAN SAPPHIRE (Electric Cyan & Royal Blue) */
   .theme-ocean {
     --brand-50: #F0F9FF;
     --brand-100: #E0F2FE;
@@ -79,9 +172,29 @@
     --brand-800: #075985;
     --brand-900: #0C4A6E;
     --brand-950: #082F49;
+
+    --brand-accent-50: #EFF6FF;
+    --brand-accent-100: #DBEAFE;
+    --brand-accent-200: #BFDBFE;
+    --brand-accent-300: #93C5FD;
+    --brand-accent-400: #60A5FA;
+    --brand-accent-500: #3B82F6;
+    --brand-accent-600: #2563EB;
+    --brand-accent-700: #1D4ED8;
+    --brand-accent-800: #1E40AF;
+    --brand-accent-900: #1E3A8A;
+    --brand-accent-950: #172554;
+
+    --brand-glow-rgb: 2, 132, 199;
+    --bg-ambient-1: rgba(14, 165, 233, 0.09);
+    --bg-ambient-2: rgba(37, 99, 235, 0.08);
+  }
+  .dark.theme-ocean, .dark .theme-ocean {
+    --bg-ambient-1: rgba(2, 132, 199, 0.13);
+    --bg-ambient-2: rgba(37, 99, 235, 0.10);
   }
 
-  /* THEME PRESET: SUNSET AMBER (Warm Gold & Copper) */
+  /* THEME 5: SUNSET GOLD (Warm Amber & Copper Luxe) */
   .theme-amber {
     --brand-50: #FFFBEB;
     --brand-100: #FEF3C7;
@@ -94,9 +207,29 @@
     --brand-800: #92400E;
     --brand-900: #78350F;
     --brand-950: #451A03;
+
+    --brand-accent-50: #FFF7ED;
+    --brand-accent-100: #FFEDD5;
+    --brand-accent-200: #FED7AA;
+    --brand-accent-300: #FDBA74;
+    --brand-accent-400: #FB923C;
+    --brand-accent-500: #F97316;
+    --brand-accent-600: #EA580C;
+    --brand-accent-700: #C2410C;
+    --brand-accent-800: #9A3412;
+    --brand-accent-900: #7C2D12;
+    --brand-accent-950: #431407;
+
+    --brand-glow-rgb: 217, 119, 6;
+    --bg-ambient-1: rgba(245, 158, 11, 0.09);
+    --bg-ambient-2: rgba(234, 88, 12, 0.08);
+  }
+  .dark.theme-amber, .dark .theme-amber {
+    --bg-ambient-1: rgba(217, 119, 6, 0.13);
+    --bg-ambient-2: rgba(234, 88, 12, 0.10);
   }
 
-  /* THEME PRESET: OBSIDIAN MONOCHROME (Platinum Minimalist) */
+  /* THEME 6: OBSIDIAN MINIMAL (Platinum & Stealth Slate) */
   .theme-monochrome {
     --brand-50: #F4F4F5;
     --brand-100: #E4E4E7;
@@ -109,6 +242,26 @@
     --brand-800: #09090B;
     --brand-900: #000000;
     --brand-950: #000000;
+
+    --brand-accent-50: #F8FAFC;
+    --brand-accent-100: #F1F5F9;
+    --brand-accent-200: #E2E8F0;
+    --brand-accent-300: #CBD5E1;
+    --brand-accent-400: #94A3B8;
+    --brand-accent-500: #64748B;
+    --brand-accent-600: #475569;
+    --brand-accent-700: #334155;
+    --brand-accent-800: #1E293B;
+    --brand-accent-900: #0F172A;
+    --brand-accent-950: #020617;
+
+    --brand-glow-rgb: 71, 85, 105;
+    --bg-ambient-1: rgba(100, 116, 139, 0.07);
+    --bg-ambient-2: rgba(51, 65, 85, 0.06);
+  }
+  .dark.theme-monochrome, .dark .theme-monochrome {
+    --bg-ambient-1: rgba(148, 163, 184, 0.08);
+    --bg-ambient-2: rgba(71, 85, 105, 0.07);
   }
 }
 
@@ -124,6 +277,10 @@
 
   body {
     background-color: var(--bg-main);
+    background-image: 
+      radial-gradient(circle at 15% 15%, var(--bg-ambient-1) 0%, transparent 50%),
+      radial-gradient(circle at 85% 85%, var(--bg-ambient-2) 0%, transparent 50%);
+    background-attachment: fixed;
     color: var(--text-primary);
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     overflow-x: hidden;

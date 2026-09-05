@@ -38,7 +38,7 @@ export function UserProfileDropdown({ isCollapsed = false }: UserProfileDropdown
         title={isCollapsed ? `${displayName} (${displayRole})` : undefined}
       >
         <div className="flex items-center space-x-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-white font-bold text-xs shadow-md shadow-brand-500/20 shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-accent-500 flex items-center justify-center text-white font-bold text-xs shadow-md shadow-brand-500/20 shrink-0">
             {initials}
           </div>
           {!isCollapsed && (

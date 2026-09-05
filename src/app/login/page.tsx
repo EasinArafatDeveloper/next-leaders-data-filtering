@@ -148,8 +148,8 @@ function LoginFormContent() {
     <div className="min-h-screen relative flex items-center justify-center p-4 sm:p-6 overflow-hidden bg-[#F8FAFC] dark:bg-[#080C14] transition-colors duration-300">
       {/* Dynamic Ambient Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-[25%] -left-[15%] w-[600px] h-[600px] rounded-full bg-gradient-to-tr from-brand-600/20 to-indigo-500/20 blur-[130px] dark:from-brand-600/15 dark:to-indigo-500/15" />
-        <div className="absolute -bottom-[25%] -right-[15%] w-[600px] h-[600px] rounded-full bg-gradient-to-br from-indigo-600/20 to-brand-500/20 blur-[130px] dark:from-indigo-600/15 dark:to-brand-500/15" />
+        <div className="absolute -top-[25%] -left-[15%] w-[600px] h-[600px] rounded-full bg-gradient-to-tr from-brand-600/25 to-accent-500/25 blur-[130px] dark:from-brand-600/20 dark:to-accent-500/20" />
+        <div className="absolute -bottom-[25%] -right-[15%] w-[600px] h-[600px] rounded-full bg-gradient-to-br from-accent-600/25 to-brand-500/25 blur-[130px] dark:from-accent-600/20 dark:to-brand-500/20" />
         {/* Subtle grid mesh overlay */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808010_1px,transparent_1px),linear-gradient(to_bottom,#80808010_1px,transparent_1px)] bg-[size:32px_32px]" />
       </div>
@@ -325,7 +325,7 @@ function LoginFormContent() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 text-white font-bold text-sm shadow-lg shadow-brand-600/25 flex items-center justify-center gap-2 transition-all hover:shadow-brand-600/40 active:scale-[0.99] disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-brand-600 to-accent-600 hover:from-brand-700 hover:to-accent-700 text-white font-bold text-sm shadow-lg shadow-brand-600/25 flex items-center justify-center gap-2 transition-all hover:shadow-brand-600/40 active:scale-[0.99] disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
               >
                 {isLoading ? (
                   <div className="flex items-center gap-2">
