@@ -4,29 +4,111 @@
 
 @layer base {
   :root {
-    --bg-main: #F7F8FA;
+    --bg-main: #F8FAFC;
     --bg-surface: #FFFFFF;
     --bg-sidebar: #FFFFFF;
-    --border-color: #E5E7EB;
-    --text-primary: #111827;
-    --text-secondary: #4B5563;
-    --text-muted: #9CA3AF;
-    --primary: #4F46E5;
-    --primary-hover: #4338CA;
-    --primary-light: #EEF2FF;
+    --border-color: #E2E8F0;
+    --text-primary: #0F172A;
+    --text-secondary: #475569;
+    --text-muted: #94A3B8;
+
+    /* Theme: Royal Indigo (Default) */
+    --brand-50: #EEF2FF;
+    --brand-100: #E0E7FF;
+    --brand-200: #C7D2FE;
+    --brand-300: #A5B4FC;
+    --brand-400: #818CF8;
+    --brand-500: #6366F1;
+    --brand-600: #4F46E5;
+    --brand-700: #4338CA;
+    --brand-800: #3730A3;
+    --brand-900: #312E81;
+    --brand-950: #1E1B4B;
   }
 
   .dark {
-    --bg-main: #0B0F19;
-    --bg-surface: #111827;
-    --bg-sidebar: #111827;
-    --border-color: #1F2937;
-    --text-primary: #F9FAFB;
-    --text-secondary: #9CA3AF;
-    --text-muted: #6B7280;
-    --primary: #6366F1;
-    --primary-hover: #4F46E5;
-    --primary-light: #1E1B4B;
+    --bg-main: #090D16;
+    --bg-surface: #0F172A;
+    --bg-sidebar: #0F172A;
+    --border-color: #1E293B;
+    --text-primary: #F8FAFC;
+    --text-secondary: #94A3B8;
+    --text-muted: #64748B;
+  }
+
+  /* THEME PRESET: CYBER EMERALD (Green Matrix) */
+  .theme-emerald {
+    --brand-50: #ECFDF5;
+    --brand-100: #D1FAE5;
+    --brand-200: #A7F3D0;
+    --brand-300: #6EE7B7;
+    --brand-400: #34D399;
+    --brand-500: #10B981;
+    --brand-600: #059669;
+    --brand-700: #047857;
+    --brand-800: #065F46;
+    --brand-900: #064E3B;
+    --brand-950: #022C22;
+  }
+
+  /* THEME PRESET: NEON CYBERPUNK (Electric Fuchsia & Violet) */
+  .theme-cyberpunk {
+    --brand-50: #FDF4FF;
+    --brand-100: #FAE8FF;
+    --brand-200: #F5D0FE;
+    --brand-300: #F0ABFC;
+    --brand-400: #E879F9;
+    --brand-500: #D946EF;
+    --brand-600: #C026D3;
+    --brand-700: #A21CAF;
+    --brand-800: #86198F;
+    --brand-900: #701A75;
+    --brand-950: #4A044E;
+  }
+
+  /* THEME PRESET: OCEAN SAPPHIRE (Electric Cyan & Blue) */
+  .theme-ocean {
+    --brand-50: #F0F9FF;
+    --brand-100: #E0F2FE;
+    --brand-200: #BAE6FD;
+    --brand-300: #7DD3FC;
+    --brand-400: #38BDF8;
+    --brand-500: #0EA5E9;
+    --brand-600: #0284C7;
+    --brand-700: #0369A1;
+    --brand-800: #075985;
+    --brand-900: #0C4A6E;
+    --brand-950: #082F49;
+  }
+
+  /* THEME PRESET: SUNSET AMBER (Warm Gold & Copper) */
+  .theme-amber {
+    --brand-50: #FFFBEB;
+    --brand-100: #FEF3C7;
+    --brand-200: #FDE68A;
+    --brand-300: #FCD34D;
+    --brand-400: #FBBF24;
+    --brand-500: #F59E0B;
+    --brand-600: #D97706;
+    --brand-700: #B45309;
+    --brand-800: #92400E;
+    --brand-900: #78350F;
+    --brand-950: #451A03;
+  }
+
+  /* THEME PRESET: OBSIDIAN MONOCHROME (Platinum Minimalist) */
+  .theme-monochrome {
+    --brand-50: #F4F4F5;
+    --brand-100: #E4E4E7;
+    --brand-200: #D4D4D8;
+    --brand-300: #A1A1AA;
+    --brand-400: #71717A;
+    --brand-500: #52525B;
+    --brand-600: #27272A;
+    --brand-700: #18181B;
+    --brand-800: #09090B;
+    --brand-900: #000000;
+    --brand-950: #000000;
   }
 }
 

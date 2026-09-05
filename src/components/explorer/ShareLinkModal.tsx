@@ -21,6 +21,7 @@ import {
 import { FilterQueryState } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { useTheme } from '@/components/theme/ThemeProvider';
 
 interface ShareLinkModalProps {
   isOpen: boolean;
@@ -42,6 +43,7 @@ export function ShareLinkModal({
   filters,
   totalFilteredCount,
 }: ShareLinkModalProps) {
+  const { theme, colorTheme } = useTheme();
   const [title, setTitle] = useState('');
   const [targetDomain, setTargetDomain] = useState<string>('auto');
   const [isOneTime, setIsOneTime] = useState(true);
@@ -58,6 +60,8 @@ export function ShareLinkModal({
     isOneTime: boolean;
     hasPasscode: boolean;
     recordCount: number;
+    theme?: string;
+    themeMode?: string;
   } | null>(null);
   const [isCopied, setIsCopied] = useState(false);
 
@@ -75,6 +79,8 @@ export function ShareLinkModal({
           maxViews: isOneTime ? 1 : maxViews,
           expiryHours,
           passcode: enablePasscode && passcode.trim() ? passcode.trim() : undefined,
+          theme: colorTheme,
+          themeMode: theme,
         }),
       });
 
@@ -84,7 +90,7 @@ export function ShareLinkModal({
       }
 
       setGeneratedLink(data);
-      toast.success('256-Bit Cryptographic link generated successfully!');
+      toast.success('Share link generated successfully!');
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || 'Error generating link');
@@ -147,20 +153,17 @@ export function ShareLinkModal({
                 </div>
                 <div>
                   <h3 className="font-extrabold text-base tracking-tight flex items-center gap-2">
-                    Secure One-Time Share
-                    <span className="px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black uppercase tracking-wider">
-                      256-Bit Crypto
-                    </span>
+                    Share Contacts Snapshot
                   </h3>
                   <p className="text-xs text-white/80 font-medium">
-                    Share {totalFilteredCount.toLocaleString()} filtered contacts with anti-screenshot & burn protection
+                    Share {totalFilteredCount.toLocaleString()} filtered contacts securely
                   </p>
                 </div>
               </div>
 
               <button
                 onClick={handleModalClose}
-                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -381,13 +384,13 @@ export function ShareLinkModal({
                   {/* Active Safeguards Banner */}
                   <div className="p-3 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 space-y-1.5">
                     <div className="flex items-center gap-1.5 font-bold text-emerald-800 dark:text-emerald-300 text-[11px]">
-                      <ShieldCheck className="w-4 h-4" /> Active Anti-Data Leak Safeguards:
+                      <ShieldCheck className="w-4 h-4" /> Privacy & Security:
                     </div>
                     <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] text-emerald-700 dark:text-emerald-400">
-                      <div>✓ 256-Bit Cryptographic Hash</div>
-                      <div>✓ Multi-Domain Stealth Cloaking</div>
-                      <div>✓ Right-Click & DevTools Blocked</div>
-                      <div>✓ Instant Window-Blur Guard</div>
+                      <div>✓ Encrypted Share Token</div>
+                      <div>✓ Auto-Expiration Timer</div>
+                      <div>✓ Optional View Limit & Passcode</div>
+                      <div>✓ Direct View Access</div>
                     </div>
                   </div>
                 </>
@@ -399,11 +402,11 @@ export function ShareLinkModal({
                       <Sparkles className="w-6 h-6" />
                     </div>
                     <h4 className="font-extrabold text-gray-900 dark:text-white text-base">
-                      Cryptographic Hardened Link Ready!
+                      Share Link Ready!
                     </h4>
                     <p className="text-xs text-gray-500">
                       {generatedLink.isOneTime
-                        ? '🔥 Single-Use: This link will be permanently burned after the first view.'
+                        ? '🔥 Single-Use: This link will expire after the first view.'
                         : `Expires in ${expiryHours} hours.`}
                     </p>
                   </div>
@@ -428,10 +431,10 @@ export function ShareLinkModal({
                       <button
                         type="button"
                         onClick={handleCopy}
-                        className="flex-1 py-2.5 px-4 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.98]"
+                        className="flex-1 py-2.5 px-4 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.98] cursor-pointer"
                       >
                         {isCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                        <span>{isCopied ? 'Copied to Clipboard!' : 'Copy 256-Bit Link'}</span>
+                        <span>{isCopied ? 'Copied to Clipboard!' : 'Copy Share Link'}</span>
                       </button>
 
                       <a
@@ -445,17 +448,6 @@ export function ShareLinkModal({
                       </a>
                     </div>
                   </div>
-
-                  {/* Stealth Cloaking notice */}
-                  <div className="p-3.5 rounded-2xl bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-900/60 flex items-start gap-2.5 text-brand-800 dark:text-brand-300 text-xs">
-                    <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-brand-600" />
-                    <div>
-                      <span className="font-bold">Stealth Cloaking Active:</span>
-                      <p className="text-[11px] text-brand-700/90 dark:text-brand-400/90 mt-0.5">
-                        Direct visits to the root domain will return a fake 404. Your main dashboard remains 100% invisible.
-                      </p>
-                    </div>
-                  </div>
                 </div>
               )}
             </div>
@@ -467,7 +459,7 @@ export function ShareLinkModal({
                   <button
                     type="button"
                     onClick={handleModalClose}
-                    className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 transition-colors"
+                    className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -475,14 +467,14 @@ export function ShareLinkModal({
                     type="button"
                     onClick={handleGenerate}
                     disabled={isGenerating || totalFilteredCount === 0}
-                    className="flex-1 py-2.5 px-5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md shadow-brand-600/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
+                    className="flex-1 py-2.5 px-5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md shadow-brand-600/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
                   >
                     {isGenerating ? (
-                      <span>Generating 256-Bit Link...</span>
+                      <span>Generating Link...</span>
                     ) : (
                       <>
                         <Lock className="w-4 h-4" />
-                        <span>Generate One-Time Secure Link</span>
+                        <span>Generate Share Link</span>
                       </>
                     )}
                   </button>
@@ -491,7 +483,7 @@ export function ShareLinkModal({
                 <button
                   type="button"
                   onClick={handleModalClose}
-                  className="w-full py-2.5 rounded-xl bg-gray-200 dark:bg-slate-800 hover:bg-gray-300 dark:hover:bg-slate-700 text-xs font-bold text-gray-800 dark:text-gray-200 transition-colors"
+                  className="w-full py-2.5 rounded-xl bg-gray-200 dark:bg-slate-800 hover:bg-gray-300 dark:hover:bg-slate-700 text-xs font-bold text-gray-800 dark:text-gray-200 transition-colors cursor-pointer"
                 >
                   Done / Close
                 </button>

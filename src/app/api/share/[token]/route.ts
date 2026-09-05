@@ -73,6 +73,8 @@ export async function GET(
         maxViews: shareLink.maxViews,
         isOneTime: shareLink.maxViews === 1,
         createdBy: shareLink.createdBy,
+        theme: shareLink.theme || 'indigo',
+        themeMode: shareLink.themeMode || 'dark',
       });
     }
 
@@ -109,6 +111,8 @@ export async function GET(
       isBurned: shareLink.isBurned,
       expiresAt: shareLink.expiresAt,
       createdBy: shareLink.createdBy,
+      theme: shareLink.theme || 'indigo',
+      themeMode: shareLink.themeMode || 'dark',
       sessionWatermark,
       accessedAt: new Date().toISOString(),
     });
@@ -243,6 +247,8 @@ export async function POST(
       isBurned: shareLink.isBurned,
       expiresAt: shareLink.expiresAt,
       createdBy: shareLink.createdBy,
+      theme: shareLink.theme || 'indigo',
+      themeMode: shareLink.themeMode || 'dark',
       sessionWatermark,
       accessedAt: new Date().toISOString(),
     });

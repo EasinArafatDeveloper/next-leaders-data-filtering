@@ -15,17 +15,17 @@ module.exports = {
     extend: {
       colors: {
         brand: {
-          50: '#EEF2FF',
-          100: '#E0E7FF',
-          200: '#C7D2FE',
-          300: '#A5B4FC',
-          400: '#818CF8',
-          500: '#6366F1',
-          600: '#4F46E5',
-          700: '#4338CA',
-          800: '#3730A3',
-          900: '#312E81',
-          950: '#1E1B4B',
+          50: 'var(--brand-50, #EEF2FF)',
+          100: 'var(--brand-100, #E0E7FF)',
+          200: 'var(--brand-200, #C7D2FE)',
+          300: 'var(--brand-300, #A5B4FC)',
+          400: 'var(--brand-400, #818CF8)',
+          500: 'var(--brand-500, #6366F1)',
+          600: 'var(--brand-600, #4F46E5)',
+          700: 'var(--brand-700, #4338CA)',
+          800: 'var(--brand-800, #3730A3)',
+          900: 'var(--brand-900, #312E81)',
+          950: 'var(--brand-950, #1E1B4B)',
         },
         surface: {
           light: '#FFFFFF',

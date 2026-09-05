@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTheme } from '@/components/theme/ThemeProvider';
+import { ThemeSelector } from '@/components/theme/ThemeSelector';
 import { useAuth } from '@/components/auth/AuthContext';
 import { useRouter } from 'next/navigation';
 
@@ -844,55 +845,37 @@ export default function SettingsPage() {
                 )}
               </div>
 
-              {/* 2. ACTIVE BROWSER & OS INTELLIGENCE CARD */}
+              {/* 2. ACTIVE SESSION CARD */}
               <div className="p-7 rounded-3xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-card space-y-4">
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" /> Active Session & Hardware Details
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600" /> Active Session
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => logout()}
+                    className="px-3.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/60 text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5" /> Sign Out
+                  </button>
+                </div>
 
-                <div className="space-y-3 text-xs">
-                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-gray-100 dark:border-slate-800 flex items-center justify-between">
-                    <div className="flex items-center gap-3.5">
-                      <div className="p-2.5 rounded-xl bg-brand-100 dark:bg-brand-950 text-brand-600 dark:text-brand-400 shrink-0">
-                        <Monitor className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <p className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                          <span>{clientDeviceInfo.os} &bull; {clientDeviceInfo.browser}</span>
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold text-[10px]">
-                            Current Active Session
-                          </span>
-                        </p>
-                        <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                          Authenticated as <strong>@{user?.username || 'admin'}</strong> via Encrypted HttpOnly JWT
-                        </p>
-                      </div>
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-gray-100 dark:border-slate-800 flex items-center justify-between">
+                  <div className="flex items-center gap-3.5">
+                    <div className="p-2.5 rounded-xl bg-brand-100 dark:bg-brand-950 text-brand-600 dark:text-brand-400 shrink-0">
+                      <Monitor className="w-5 h-5" />
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                    <div className="p-3.5 rounded-2xl bg-gray-50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-800 space-y-1">
-                      <p className="text-[11px] font-bold text-gray-500 uppercase">Brute-Force Guard</p>
-                      <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                        Active (Auto-lock after 5 invalid attempts)
+                    <div>
+                      <p className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <span>{clientDeviceInfo.os} &bull; {clientDeviceInfo.browser}</span>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold text-[10px]">
+                          Current Session
+                        </span>
+                      </p>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                        Logged in as <strong>@{user?.username || 'admin'}</strong>
                       </p>
                     </div>
-                    <div className="p-3.5 rounded-2xl bg-gray-50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-800 space-y-1">
-                      <p className="text-[11px] font-bold text-gray-500 uppercase">Route Interceptor</p>
-                      <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                        Edge Middleware 2FA Guard Active
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="pt-2 flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => logout()}
-                      className="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/60 text-xs font-semibold transition-all flex items-center gap-1.5"
-                    >
-                      <LogOut className="w-3.5 h-3.5" /> Sign Out From All Devices
-                    </button>
                   </div>
                 </div>
               </div>
@@ -903,9 +886,6 @@ export default function SettingsPage() {
                   <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                     <KeyRound className="w-4 h-4 text-brand-600" /> Change Administrator Password
                   </h3>
-                  <span className="text-[11px] px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-200 dark:border-emerald-900/60 flex items-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5" /> BCrypt Salt-10
-                  </span>
                 </div>
 
                 <form onSubmit={handleChangePassword} className="space-y-4">
@@ -1171,46 +1151,33 @@ export default function SettingsPage() {
 
           {/* System Section */}
           {activeSection === 'system' && (
-            <div className="p-7 rounded-3xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-card space-y-6">
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <Monitor className="w-4 h-4 text-brand-600" /> System & Security Environment
-              </h3>
-
-              <div className="space-y-4">
-                {/* Dark Mode Toggle */}
-                <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
-                  <div>
-                    <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">
-                      Dark Mode
-                    </p>
-                    <p className="text-[11px] text-gray-400">
-                      Switch between light and dark interface theme
-                    </p>
-                  </div>
-                  <button
-                    onClick={toggleTheme}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all ${
-                      theme === 'dark' ? 'bg-brand-600' : 'bg-gray-300 dark:bg-slate-600'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-all ${
-                        theme === 'dark' ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
+            <div className="space-y-6">
+              {/* Theme & Visual Appearance Customizer */}
+              <div className="p-7 rounded-3xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-card space-y-5">
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-brand-600" /> Visual Theme & Style Presets
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Choose from 6 curated color themes and switch between light and dark modes. Your selected theme syncs across your dashboard and generated share links.
+                  </p>
                 </div>
 
-                {/* Version & Security Info */}
+                <ThemeSelector variant="expanded" />
+              </div>
+
+              {/* System Environment Info */}
+              <div className="p-7 rounded-3xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-card space-y-4">
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Monitor className="w-4 h-4 text-brand-600" /> System Environment
+                </h3>
+
                 <div className="py-3 px-4 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 space-y-2 text-xs">
                   {[
                     { label: 'Application', value: 'DATAFLOW v1.0.0' },
-                    { label: 'Two-Factor Auth', value: 'RFC 6238 TOTP (Multi-Device Synchronized)' },
-                    { label: 'Auth Guard', value: 'Next.js Edge Middleware + JWT' },
-                    { label: 'Password Encryption', value: 'BCrypt Salt-Rounds 10' },
-                    { label: 'Database', value: 'MongoDB Atlas (Mongoose)' },
-                    { label: 'Brute-Force Protection', value: 'Enabled (5 Max Attempts)' },
-                    { label: 'Security Headers', value: 'X-Frame-Options, CSP, Nosniff' },
+                    { label: 'Database', value: 'MongoDB Atlas (Connected)' },
+                    { label: 'Security Mode', value: 'Two-Factor Authentication (2FA)' },
+                    { label: 'Environment', value: 'Production' },
                   ].map((info) => (
                     <div key={info.label} className="flex justify-between">
                       <span className="text-gray-500">{info.label}</span>

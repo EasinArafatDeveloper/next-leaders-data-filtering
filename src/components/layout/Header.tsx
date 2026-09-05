@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Menu, Sun, Moon, Bell, HelpCircle, UploadCloud, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useTheme } from '../theme/ThemeProvider';
+import { ThemeSelector } from '../theme/ThemeSelector';
 import Link from 'next/link';
 
 interface HeaderProps {
@@ -103,15 +104,8 @@ export function Header({ onMobileMenuOpen, isCollapsed, onToggleCollapse }: Head
           </Link>
         )}
 
-        {/* Theme Toggle Button */}
-        <button
-          type="button"
-          onClick={toggleTheme}
-          className="p-2 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-white transition-colors"
-          title="Toggle Light / Dark Mode"
-        >
-          {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-        </button>
+        {/* Theme & Palette Selector */}
+        <ThemeSelector variant="compact" />
 
         {/* Notification Bell with Popover */}
         <div className="relative">

@@ -48,6 +48,8 @@ export async function POST(request: NextRequest) {
       expiryHours = 24,
       passcode,
       targetDomain,
+      theme = 'indigo',
+      themeMode = 'dark',
     } = body || {};
 
     let matchingRecords: any[] = [];
@@ -267,13 +269,15 @@ export async function POST(request: NextRequest) {
       passcodeHash,
       hasPasscode,
       domainUsed: domainLabel,
+      theme,
+      themeMode,
       createdBy: session.name || session.username || 'Administrator',
     });
 
     // 9. Log activity
     await ActivityLogModel.create({
       action: 'Created One-Time Secure Share Link',
-      description: `Generated 256-bit crypto link for ${recordsSnapshot.length} records on ${domainLabel} (Single-Use: ${isOneTime})`,
+      description: `Generated link for ${recordsSnapshot.length} records on ${domainLabel} (Single-Use: ${isOneTime})`,
       user: session.name || session.username || 'Administrator',
       type: 'system',
     });
@@ -288,6 +292,8 @@ export async function POST(request: NextRequest) {
       maxViews: viewsAllowed,
       isOneTime,
       hasPasscode,
+      theme,
+      themeMode,
     });
   } catch (error: any) {
     console.error('Error creating share link:', error);

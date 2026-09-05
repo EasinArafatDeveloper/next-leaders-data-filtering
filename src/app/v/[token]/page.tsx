@@ -127,9 +127,22 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
         const res = await fetch(`/api/share/${token}`, { cache: 'no-store' });
         const data = await res.json();
 
+        if (data.theme) {
+          const root = document.documentElement;
+          root.classList.remove(
+            'theme-indigo',
+            'theme-emerald',
+            'theme-cyberpunk',
+            'theme-ocean',
+            'theme-amber',
+            'theme-monochrome'
+          );
+          root.classList.add(`theme-${data.theme}`);
+        }
+
         if (res.status === 410) {
           setErrorInfo({
-            message: data.error || 'This encrypted payload is no longer available.',
+            message: data.error || 'This shared link is no longer available.',
             statusType: data.statusType || 'BURNED',
           });
           setIsLoading(false);
@@ -138,7 +151,7 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
 
         if (!res.ok) {
           setErrorInfo({
-            message: data.error || 'Unable to access encrypted payload.',
+            message: data.error || 'Unable to access shared link.',
             statusType: data.statusType || 'NOT_FOUND',
           });
           setIsLoading(false);
@@ -154,7 +167,7 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
         setShareData(data);
       } catch {
         setErrorInfo({
-          message: 'Network error or unable to load encrypted payload.',
+          message: 'Network error or unable to load shared link.',
           statusType: 'ERROR',
         });
       } finally {
@@ -165,7 +178,7 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
     loadShareLink();
   }, [token]);
 
-  // 2. Passcode Unlock Submit with 3-Attempt Auto-Lock / Self-Destruct
+  // 2. Passcode Unlock Submit
   const handleUnlockPasscode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!passcode.trim()) {
@@ -183,12 +196,25 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
       });
       const data = await res.json();
 
+      if (data.theme) {
+        const root = document.documentElement;
+        root.classList.remove(
+          'theme-indigo',
+          'theme-emerald',
+          'theme-cyberpunk',
+          'theme-ocean',
+          'theme-amber',
+          'theme-monochrome'
+        );
+        root.classList.add(`theme-${data.theme}`);
+      }
+
       if (res.status === 410) {
         setRequiresPasscode(false);
         setErrorInfo({
           message:
             data.error ||
-            'Maximum failed passcode attempts reached. This link has been permanently burned.',
+            'Maximum failed passcode attempts reached. This link has expired.',
           statusType: data.statusType || 'BURNED',
         });
         return;
@@ -359,9 +385,9 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
             <Lock className="w-6 h-6 animate-spin" />
           </div>
           <div>
-            <h3 className="font-bold text-base text-gray-900">Verifying Cryptographic Payload...</h3>
+            <h3 className="font-bold text-base text-gray-900">Loading Shared Contacts...</h3>
             <p className="text-xs text-gray-500 mt-1">
-              Authenticating 256-bit token & access signatures
+              Verifying link access
             </p>
           </div>
         </div>
@@ -415,28 +441,19 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
                   : 'bg-amber-100 text-amber-800 border border-amber-200'
               }`}
             >
-              {isBurned ? 'Payload Burned • Self-Destructed' : 'Token Expired'}
+              {isBurned ? 'Link Expired' : 'Expired'}
             </span>
 
             <h2 className="text-xl font-extrabold text-gray-900">
               {isBurned
-                ? 'This Link Has Been Burned'
+                ? 'This Link Has Expired'
                 : isExpired
-                ? 'This Secure Link Has Expired'
+                ? 'This Link Has Expired'
                 : 'Access Unavailable'}
             </h2>
 
             <p className="text-xs text-gray-600 leading-relaxed">
               {errorInfo.message}
-            </p>
-          </div>
-
-          <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-200 text-[11px] text-gray-600 text-left space-y-1">
-            <div className="font-bold text-gray-800 flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Security Protocol Explanation:
-            </div>
-            <p>
-              This snapshot was shared using <strong>One-Time Burn Protection & 3-Strike Auto-Lock</strong>. To prevent unauthorized redistribution or data harvesting, records are permanently erased from memory after the viewing session ends or invalid passcode threshold is reached.
             </p>
           </div>
         </motion.div>
@@ -460,14 +477,8 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
           <div>
             <h2 className="text-lg font-extrabold text-gray-900">Passcode Protected View</h2>
             <p className="text-xs text-gray-500 mt-1">
-              Enter the secret PIN or passcode provided by the sender to unlock this data.
+              Enter the passcode provided by the sender to unlock this data.
             </p>
-          </div>
-
-          {/* Anti-Brute-Force Warning Banner */}
-          <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 font-semibold flex items-center justify-center gap-1.5 shadow-xs">
-            <Flame className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-            <span>Anti-Brute Force: 3 wrong attempts will permanently burn this link.</span>
           </div>
 
           <form onSubmit={handleUnlockPasscode} className="space-y-4">
@@ -479,7 +490,7 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
                   setPasscode(e.target.value);
                   setPasscodeError('');
                 }}
-                placeholder="Enter secret passcode..."
+                placeholder="Enter passcode..."
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-2xl text-center font-mono text-base text-gray-900 tracking-widest placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-inner"
                 autoFocus
               />
@@ -491,15 +502,11 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
             <button
               type="submit"
               disabled={isUnlocking}
-              className="w-full py-3 rounded-2xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-brand-600/20 transition-all active:scale-[0.98] disabled:opacity-50"
+              className="w-full py-3 rounded-2xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-brand-600/20 transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
             >
-              {isUnlocking ? 'Unlocking Records...' : 'Unlock & View Data'}
+              {isUnlocking ? 'Unlocking...' : 'Unlock & View Contacts'}
             </button>
           </form>
-
-          <p className="text-[10px] text-gray-400 font-medium">
-            🔒 Protected with 256-bit cryptographic verification
-          </p>
         </motion.div>
       </div>
     );
@@ -954,8 +961,8 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
       </main>
 
       {/* Footer */}
-      <footer className="mt-auto py-4 border-t border-gray-200 text-center text-gray-500 text-xs bg-white/80">
-        Encrypted Vault Gateway • Protected by Single-Use Burn & 256-Bit Cryptographic Safeguards
+      <footer className="mt-auto py-4 border-t border-gray-200 text-center text-gray-400 text-xs bg-white/80">
+        Contacts Snapshot &bull; Confidential View
       </footer>
     </div>
   );

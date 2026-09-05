@@ -21,6 +21,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/components/auth/AuthContext';
 import { useTheme } from '@/components/theme/ThemeProvider';
+import { ThemeSelector } from '@/components/theme/ThemeSelector';
 import { toast } from 'sonner';
 
 function LoginFormContent() {
@@ -153,26 +154,9 @@ function LoginFormContent() {
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808010_1px,transparent_1px),linear-gradient(to_bottom,#80808010_1px,transparent_1px)] bg-[size:32px_32px]" />
       </div>
 
-      {/* Top Bar: Theme Switcher & Security Status */}
-      <header className="absolute top-4 sm:top-6 inset-x-4 sm:inset-x-8 flex items-center justify-between z-10 max-w-6xl mx-auto">
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/70 dark:bg-slate-900/70 border border-gray-200/80 dark:border-slate-800/80 backdrop-blur-md shadow-sm">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-          </span>
-          <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">
-            Enterprise Security Active
-          </span>
-        </div>
-
-        <button
-          type="button"
-          onClick={toggleTheme}
-          className="p-2.5 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-gray-200/80 dark:border-slate-800/80 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white shadow-sm backdrop-blur-md transition-all hover:scale-105 active:scale-95"
-          title="Toggle Light / Dark Mode"
-        >
-          {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-        </button>
+      {/* Top Bar: Theme Switcher */}
+      <header className="absolute top-4 sm:top-6 inset-x-4 sm:inset-x-8 flex items-center justify-end z-10 max-w-6xl mx-auto">
+        <ThemeSelector variant="compact" />
       </header>
 
       {/* Main Login Card */}
@@ -463,17 +447,9 @@ function LoginFormContent() {
             </motion.form>
           )}
 
-          {/* Footer Security Badges */}
-          <div className="pt-4 border-t border-gray-100 dark:border-slate-800/80 flex items-center justify-center gap-4 text-[10px] text-gray-400 dark:text-gray-500 font-medium">
-            <span className="flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /> RFC 6238 TOTP
-            </span>
-            <span>&bull;</span>
-            <span className="flex items-center gap-1">
-              <Lock className="w-3.5 h-3.5 text-brand-500" /> AES-256 Auth
-            </span>
-            <span>&bull;</span>
-            <span>Brute-Force Guard</span>
+          {/* Clean Minimalist Footer */}
+          <div className="pt-3 border-t border-gray-100 dark:border-slate-800/80 flex items-center justify-center text-[11px] text-gray-400 dark:text-gray-500 font-medium">
+            <span>DATAFLOW &bull; Lead Management Platform</span>
           </div>
         </div>
       </motion.div>
