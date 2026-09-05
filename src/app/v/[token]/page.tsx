@@ -19,8 +19,6 @@ import {
   CameraOff,
   LayoutGrid,
   Table2,
-  Copy,
-  Check,
   Tag,
   Users,
 } from 'lucide-react';
@@ -98,25 +96,10 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
   // Local search filter
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Copy phone feedback
-  const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
-
   // Security violation states
   const [isWindowBlurred, setIsWindowBlurred] = useState(false);
   const [isDevToolsDetected, setIsDevToolsDetected] = useState(false);
   const [isScreenshotAttempted, setIsScreenshotAttempted] = useState(false);
-
-  const copyPhoneToClipboard = (phone: string) => {
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(phone);
-      }
-      setCopiedPhone(phone);
-      setTimeout(() => {
-        setCopiedPhone(null);
-      }, 2000);
-    } catch {}
-  };
 
   // 1. Initial Link Load
   useEffect(() => {
@@ -518,18 +501,6 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col select-none relative overflow-x-hidden font-sans">
-      {/* Dynamic High-Density Diagonal Watermark Pattern */}
-      <div
-        className="pointer-events-none fixed inset-0 z-20 opacity-[0.09] flex flex-wrap items-center justify-center gap-16 p-6 overflow-hidden rotate-[-22deg] select-none text-slate-950 font-black"
-        aria-hidden="true"
-      >
-        {Array.from({ length: 96 }).map((_, i) => (
-          <span key={i} className="text-xs sm:text-sm font-black tracking-widest whitespace-nowrap drop-shadow-xs">
-            {shareData.sessionWatermark}
-          </span>
-        ))}
-      </div>
-
       {/* 100% Solid Opaque Privacy Blackout Shield (Zero-Transparency - No bleed through on screenshot) */}
       <AnimatePresence>
         {isShieldActive && (
@@ -761,36 +732,14 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
                         </div>
                       </div>
 
-                      {/* Phone Box with Direct Call & Copy Action */}
-                      <div className="mt-3 p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2">
-                        <a
-                          href={`tel:${record.phone}`}
-                          className="flex items-center gap-2 font-mono font-bold text-xs text-emerald-700 hover:text-emerald-800 transition-colors"
-                        >
-                          <div className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                            <Phone className="w-3.5 h-3.5" />
-                          </div>
-                          <span>{record.phone}</span>
-                        </a>
-
-                        <button
-                          type="button"
-                          onClick={() => copyPhoneToClipboard(record.phone)}
-                          title="Copy Phone Number"
-                          className="px-2.5 py-1 rounded-lg bg-white border border-gray-200 text-gray-600 hover:text-brand-600 hover:border-brand-300 transition-all shadow-2xs text-[11px] flex items-center gap-1 font-medium active:scale-95"
-                        >
-                          {copiedPhone === record.phone ? (
-                            <>
-                              <Check className="w-3.5 h-3.5 text-emerald-600" />
-                              <span className="text-emerald-700 font-bold text-[10px]">Copied</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-3.5 h-3.5 text-gray-500" />
-                              <span className="text-gray-600 text-[10px]">Copy</span>
-                            </>
-                          )}
-                        </button>
+                      {/* Phone Display (Protected / Non-copyable) */}
+                      <div className="mt-3 p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2 select-none pointer-events-none">
+                        <div className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                          <Phone className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="font-mono font-bold text-xs text-emerald-700 select-none">
+                          {record.phone}
+                        </span>
                       </div>
 
                       {/* Tags / Segments */}
@@ -888,11 +837,11 @@ export default function SecureVaultViewerPage({ params }: { params: { token: str
                             </div>
                           </td>
 
-                          {/* Phone */}
-                          <td className="py-3 px-4 font-mono font-bold text-emerald-700">
-                            <div className="flex items-center gap-1.5">
+                          {/* Phone (Protected / Non-copyable) */}
+                          <td className="py-3 px-4 font-mono font-bold text-emerald-700 select-none">
+                            <div className="flex items-center gap-1.5 select-none pointer-events-none">
                               <Phone className="w-3.5 h-3.5 text-gray-400" />
-                              <span>{record.phone}</span>
+                              <span className="select-none">{record.phone}</span>
                             </div>
                           </td>
 

@@ -14,6 +14,33 @@ import {
 
 export const dynamic = 'force-dynamic';
 
+function maskPhoneNumber(phone: string): string {
+  if (!phone) return '';
+  const trimmed = String(phone).trim();
+  if (trimmed.length <= 4) {
+    return '***';
+  }
+  if (trimmed.length <= 6) {
+    return trimmed.slice(0, 2) + '***' + trimmed.slice(-1);
+  }
+
+  // Handle standard 10-15 digit phone numbers (e.g. 01712345678 -> 0171****678)
+  const isPlus = trimmed.startsWith('+');
+  const prefixLength = isPlus ? 5 : 4; // e.g. +8801 or 0171
+  const suffixLength = 3; // e.g. 678
+
+  if (trimmed.length > prefixLength + suffixLength) {
+    const maskLength = trimmed.length - prefixLength - suffixLength;
+    return (
+      trimmed.slice(0, prefixLength) +
+      '*'.repeat(Math.max(3, maskLength)) +
+      trimmed.slice(-suffixLength)
+    );
+  }
+
+  return trimmed.slice(0, 2) + '***' + trimmed.slice(-2);
+}
+
 export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
@@ -48,6 +75,7 @@ export async function POST(request: NextRequest) {
       expiryHours = 24,
       passcode,
       targetDomain,
+      maskPhoneNumbers = false,
       theme = 'indigo',
       themeMode = 'dark',
     } = body || {};
@@ -190,23 +218,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. Create sanitized snapshot
-    const recordsSnapshot = matchingRecords.map((r: any) => ({
-      name: r.name || 'Unnamed',
-      phone: r.phone || '',
-      email: r.email || '',
-      age: r.age || 0,
-      gender: r.gender || 'Other',
-      location: r.location || '',
-      area: r.area || '',
-      avatarUrl: r.avatarUrl || '',
-      avatarType: r.avatarType || 'With Avatar',
-      status: r.status || 'Active',
-      activeDays: r.activeDays || 0,
-      tags: r.tags || [],
-      category: r.category || '',
-      customFields: r.customFields || {},
-    }));
+    // 3. Create sanitized snapshot (optionally masking phone numbers with asterisks)
+    const shouldMask = Boolean(maskPhoneNumbers);
+    const recordsSnapshot = matchingRecords.map((r: any) => {
+      const rawPhone = r.phone || '';
+      const finalPhone = shouldMask ? maskPhoneNumber(rawPhone) : rawPhone;
+      return {
+        name: r.name || 'Unnamed',
+        phone: finalPhone,
+        email: r.email || '',
+        age: r.age || 0,
+        gender: r.gender || 'Other',
+        location: r.location || '',
+        area: r.area || '',
+        avatarUrl: r.avatarUrl || '',
+        avatarType: r.avatarType || 'With Avatar',
+        status: r.status || 'Active',
+        activeDays: r.activeDays || 0,
+        tags: r.tags || [],
+        category: r.category || '',
+        customFields: r.customFields || {},
+      };
+    });
 
     // 4. Generate ultra-hard 256-bit cryptographic hex token (64 chars)
     const token = generateCryptoToken();
@@ -269,6 +302,7 @@ export async function POST(request: NextRequest) {
       passcodeHash,
       hasPasscode,
       domainUsed: domainLabel,
+      maskPhoneNumbers: shouldMask,
       theme,
       themeMode,
       createdBy: session.name || session.username || 'Administrator',
@@ -277,7 +311,7 @@ export async function POST(request: NextRequest) {
     // 9. Log activity
     await ActivityLogModel.create({
       action: 'Created One-Time Secure Share Link',
-      description: `Generated link for ${recordsSnapshot.length} records on ${domainLabel} (Single-Use: ${isOneTime})`,
+      description: `Generated link for ${recordsSnapshot.length} records on ${domainLabel} (Single-Use: ${isOneTime}, Masked: ${shouldMask ? 'Yes' : 'No'})`,
       user: session.name || session.username || 'Administrator',
       type: 'system',
     });
@@ -292,6 +326,7 @@ export async function POST(request: NextRequest) {
       maxViews: viewsAllowed,
       isOneTime,
       hasPasscode,
+      maskPhoneNumbers: shouldMask,
       theme,
       themeMode,
     });

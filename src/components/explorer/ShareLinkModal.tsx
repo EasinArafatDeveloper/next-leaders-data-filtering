@@ -51,6 +51,7 @@ export function ShareLinkModal({
   const [expiryHours, setExpiryHours] = useState(24);
   const [enablePasscode, setEnablePasscode] = useState(false);
   const [passcode, setPasscode] = useState('');
+  const [maskPhoneNumbers, setMaskPhoneNumbers] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedLink, setGeneratedLink] = useState<{
     shareUrl: string;
@@ -59,6 +60,7 @@ export function ShareLinkModal({
     expiresAt: string;
     isOneTime: boolean;
     hasPasscode: boolean;
+    maskPhoneNumbers?: boolean;
     recordCount: number;
     theme?: string;
     themeMode?: string;
@@ -79,6 +81,7 @@ export function ShareLinkModal({
           maxViews: isOneTime ? 1 : maxViews,
           expiryHours,
           passcode: enablePasscode && passcode.trim() ? passcode.trim() : undefined,
+          maskPhoneNumbers,
           theme: colorTheme,
           themeMode: theme,
         }),
@@ -116,6 +119,7 @@ export function ShareLinkModal({
     setExpiryHours(24);
     setEnablePasscode(false);
     setPasscode('');
+    setMaskPhoneNumbers(false);
     setIsCopied(false);
   };
 
@@ -381,6 +385,24 @@ export function ShareLinkModal({
                     )}
                   </div>
 
+                  {/* Optional Phone Masking (Hide with ***) */}
+                  <div className="p-3.5 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-900/60 space-y-1.5">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={maskPhoneNumbers}
+                        onChange={(e) => setMaskPhoneNumbers(e.target.checked)}
+                        className="w-4 h-4 rounded text-brand-600 focus:ring-brand-500 border-gray-300 dark:border-slate-700"
+                      />
+                      <span className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                        <EyeOff className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" /> Mask Phone Numbers (Hide with ***)
+                      </span>
+                    </label>
+                    <p className="text-[11px] text-gray-600 dark:text-gray-400 pl-6 leading-relaxed">
+                      Partially hides numbers with asterisks (e.g. <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">0171****678</span>) so recipients cannot see full numbers.
+                    </p>
+                  </div>
+
                   {/* Active Safeguards Banner */}
                   <div className="p-3 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 space-y-1.5">
                     <div className="flex items-center gap-1.5 font-bold text-emerald-800 dark:text-emerald-300 text-[11px]">
@@ -389,8 +411,8 @@ export function ShareLinkModal({
                     <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] text-emerald-700 dark:text-emerald-400">
                       <div>✓ Encrypted Share Token</div>
                       <div>✓ Auto-Expiration Timer</div>
-                      <div>✓ Optional View Limit & Passcode</div>
-                      <div>✓ Direct View Access</div>
+                      <div>✓ {maskPhoneNumbers ? 'Phone Numbers Masked (***)' : 'Full Numbers (Unmasked)'}</div>
+                      <div>✓ Non-Copyable Protected View</div>
                     </div>
                   </div>
                 </>
@@ -418,9 +440,16 @@ export function ShareLinkModal({
                         <Globe className="w-3.5 h-3.5 text-brand-400" /> Domain:{' '}
                         <strong className="text-brand-300">{generatedLink.domainUsed || 'tempshr'}</strong>
                       </span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-900/80 text-emerald-300 font-bold">
-                        {generatedLink.recordCount} Records
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-900/80 text-emerald-300 font-bold">
+                          {generatedLink.recordCount} Records
+                        </span>
+                        {generatedLink.maskPhoneNumbers && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-900/80 text-indigo-300 font-bold">
+                            🎭 Masked (***)
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs text-emerald-400 break-all select-all leading-relaxed">

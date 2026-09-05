@@ -30,6 +30,7 @@ export interface IShareLinkDocument extends Document {
   failedPasscodeAttempts: number;
   maxPasscodeAttempts: number;
   domainUsed?: string;
+  maskPhoneNumbers?: boolean;
   theme?: string;
   themeMode?: string;
   createdBy: string;
@@ -58,6 +59,7 @@ const ShareLinkSchema: Schema = new Schema(
     failedPasscodeAttempts: { type: Number, default: 0 },
     maxPasscodeAttempts: { type: Number, default: 3 },
     domainUsed: { type: String, default: '' },
+    maskPhoneNumbers: { type: Boolean, default: false },
     theme: { type: String, default: 'indigo' },
     themeMode: { type: String, default: 'dark' },
     createdBy: { type: String, default: 'Administrator' },
