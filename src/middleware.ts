@@ -14,6 +14,7 @@ const getSecretKey = () => {
 const PUBLIC_PATHS = [
   '/login',
   '/api/auth/login',
+  '/api/auth/verify-2fa',
   '/api/auth/logout',
   '/v',
   '/share',
