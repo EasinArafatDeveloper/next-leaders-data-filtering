@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     await connectToDatabase();
 
     const body = await request.json();
-    const { filename, rows, fileSize, customTag, customCategory, customAttributes } = body;
+    const { filename, rows, fileSize, customTag, customCategory, customAttributes, columnMapping } = body;
 
     if (!rows || !Array.isArray(rows) || rows.length === 0) {
       return NextResponse.json(
@@ -45,6 +45,11 @@ export async function POST(request: NextRequest) {
     let validRecords: any[] = [];
     let skippedCount = 0;
 
+    const hasCustomMapping =
+      columnMapping &&
+      typeof columnMapping === 'object' &&
+      Object.keys(columnMapping).length > 0;
+
     rows.forEach((row, idx) => {
       const values = Object.values(row).filter((v) => v !== null && v !== undefined && String(v).trim() !== '');
       if (values.length === 0) {
@@ -71,141 +76,206 @@ export async function POST(request: NextRequest) {
         customFields: {},
       };
 
-      Object.keys(row).forEach((key) => {
-        const lowerKey = key.trim().toLowerCase().replace(/[\s_\.-]+/g, '');
-        const val = row[key];
+      if (hasCustomMapping) {
+        // Explicit Custom Mapping from user
+        Object.keys(row).forEach((key) => {
+          const targetField = columnMapping[key];
+          const val = row[key];
+          if (val === null || val === undefined || String(val).trim() === '') return;
 
-        if (
-          lowerKey === 'name' ||
-          lowerKey === 'fullname' ||
-          lowerKey === 'username' ||
-          lowerKey === 'nickname' ||
-          lowerKey === 'nick' ||
-          lowerKey === 'contactname' ||
-          lowerKey === 'customername' ||
-          lowerKey === 'person' ||
-          lowerKey === 'title'
-        ) {
-          const nameStr = String(val || '').trim();
-          if (nameStr && !normalizedRow.name) {
-            normalizedRow.name = nameStr;
+          if (targetField === 'skip') {
+            return;
           }
-        } else if (
-          lowerKey === 'phone' ||
-          lowerKey === 'mobile' ||
-          lowerKey === 'number' ||
-          lowerKey === 'contact' ||
-          lowerKey === 'cell' ||
-          lowerKey === 'phonenumber' ||
-          lowerKey === 'tel' ||
-          lowerKey === 'msisdn'
-        ) {
-          normalizedRow.phone = String(val || '').trim();
-        } else if (
-          lowerKey === 'email' ||
-          lowerKey === 'mail' ||
-          lowerKey === 'emailaddress'
-        ) {
-          normalizedRow.email = String(val || '').trim();
-        } else if (
-          lowerKey === 'age' ||
-          lowerKey === 'years'
-        ) {
-          const numAge = parseInt(val, 10);
-          if (!isNaN(numAge)) normalizedRow.age = numAge;
-        } else if (
-          lowerKey === 'gender' ||
-          lowerKey === 'sex'
-        ) {
-          const gStr = String(val || '').trim().toLowerCase();
-          if (gStr.startsWith('m')) normalizedRow.gender = 'Male';
-          else if (gStr.startsWith('f')) normalizedRow.gender = 'Female';
-          else normalizedRow.gender = 'Other';
-        } else if (
-          lowerKey === 'avatartype' ||
-          lowerKey === 'avatar' ||
-          lowerKey === 'avatarurl' ||
-          lowerKey === 'photo' ||
-          lowerKey === 'image' ||
-          lowerKey === 'picture' ||
-          lowerKey === 'userphoto'
-        ) {
-          const avatarVal = String(val || '').trim();
-          if (avatarVal.startsWith('http://') || avatarVal.startsWith('https://')) {
-            normalizedRow.avatarUrl = avatarVal;
-            normalizedRow.avatarOriginalUrl = avatarVal;
-            normalizedRow.avatarType = 'With Avatar';
-          } else if (avatarVal) {
-            normalizedRow.avatarType = avatarVal;
-          }
-        } else if (
-          lowerKey === 'activedays' ||
-          lowerKey === 'days' ||
-          lowerKey === 'active' ||
-          lowerKey === 'activeday'
-        ) {
-          const numDays = parseInt(val, 10);
-          if (!isNaN(numDays)) normalizedRow.activeDays = numDays;
-        } else if (
-          lowerKey === 'lastonline' ||
-          lowerKey === 'lastonlinetime' ||
-          lowerKey === 'lastactive' ||
-          lowerKey === 'online' ||
-          lowerKey === 'date' ||
-          lowerKey === 'timestamp'
-        ) {
-          const parsedDate = new Date(val);
-          if (!isNaN(parsedDate.getTime())) normalizedRow.lastActive = parsedDate;
-        } else if (
-          lowerKey === 'location' ||
-          lowerKey === 'district' ||
-          lowerKey === 'city' ||
-          lowerKey === 'division' ||
-          lowerKey === 'state' ||
-          lowerKey === 'country'
-        ) {
-          normalizedRow.location = String(val || '').trim();
-        } else if (
-          lowerKey === 'area' ||
-          lowerKey === 'thana' ||
-          lowerKey === 'zone'
-        ) {
-          normalizedRow.area = String(val || '').trim();
-        } else if (
-          lowerKey === 'address' ||
-          lowerKey === 'fulladdress'
-        ) {
-          normalizedRow.address = String(val || '').trim();
-        } else if (
-          lowerKey === 'status' ||
-          lowerKey === 'state'
-        ) {
-          const sVal = String(val || '').trim();
-          normalizedRow.status = ['Active', 'Inactive', 'Pending', 'Suspended'].includes(sVal) ? sVal : 'Active';
-        } else if (
-          lowerKey === 'tag' ||
-          lowerKey === 'tags' ||
-          lowerKey === 'label' ||
-          lowerKey === 'labels' ||
-          lowerKey === 'badge'
-        ) {
-          const tagVal = String(val || '').trim();
-          if (tagVal) {
-            tagVal.split(',').forEach((t) => {
+
+          if (targetField === 'phone') {
+            normalizedRow.phone = String(val).trim();
+          } else if (targetField === 'name') {
+            normalizedRow.name = String(val).trim();
+          } else if (targetField === 'email') {
+            normalizedRow.email = String(val).trim();
+          } else if (targetField === 'avatarUrl') {
+            const avatarVal = String(val).trim();
+            if (avatarVal.startsWith('http://') || avatarVal.startsWith('https://')) {
+              normalizedRow.avatarUrl = avatarVal;
+              normalizedRow.avatarOriginalUrl = avatarVal;
+              normalizedRow.avatarType = 'With Avatar';
+            } else if (avatarVal) {
+              normalizedRow.avatarType = avatarVal;
+            }
+          } else if (targetField === 'avatarType') {
+            normalizedRow.avatarType = String(val).trim();
+          } else if (targetField === 'age') {
+            const num = parseInt(String(val), 10);
+            if (!isNaN(num)) normalizedRow.age = num;
+          } else if (targetField === 'gender') {
+            const gStr = String(val).trim().toLowerCase();
+            if (gStr.startsWith('m')) normalizedRow.gender = 'Male';
+            else if (gStr.startsWith('f')) normalizedRow.gender = 'Female';
+            else normalizedRow.gender = 'Other';
+          } else if (targetField === 'location') {
+            normalizedRow.location = String(val).trim();
+          } else if (targetField === 'area') {
+            normalizedRow.area = String(val).trim();
+          } else if (targetField === 'address') {
+            normalizedRow.address = String(val).trim();
+          } else if (targetField === 'tags') {
+            String(val).split(',').forEach((t) => {
               const ct = t.trim();
               if (ct && !normalizedRow.tags.includes(ct)) normalizedRow.tags.push(ct);
             });
+          } else if (targetField === 'category') {
+            normalizedRow.category = String(val).trim();
+          } else if (targetField === 'status') {
+            const sVal = String(val).trim();
+            normalizedRow.status = ['Active', 'Inactive', 'Pending', 'Suspended'].includes(sVal) ? sVal : 'Active';
+          } else if (targetField === 'activeDays') {
+            const num = parseInt(String(val), 10);
+            if (!isNaN(num)) normalizedRow.activeDays = num;
+          } else if (targetField === 'lastActive') {
+            const parsedDate = new Date(val);
+            if (!isNaN(parsedDate.getTime())) normalizedRow.lastActive = parsedDate;
+          } else {
+            normalizedRow.customFields[key] = val;
           }
-        } else if (
-          lowerKey === 'category' ||
-          lowerKey === 'group' ||
-          lowerKey === 'segment'
-        ) {
-          normalizedRow.category = String(val || '').trim();
-        } else {
-          normalizedRow.customFields[key] = val;
-        }
-      });
+        });
+      } else {
+        // Automatic heuristic mapping
+        Object.keys(row).forEach((key) => {
+          const lowerKey = key.trim().toLowerCase().replace(/[\s_\.-]+/g, '');
+          const val = row[key];
+
+          if (
+            lowerKey === 'name' ||
+            lowerKey === 'fullname' ||
+            lowerKey === 'username' ||
+            lowerKey === 'nickname' ||
+            lowerKey === 'nick' ||
+            lowerKey === 'contactname' ||
+            lowerKey === 'customername' ||
+            lowerKey === 'person' ||
+            lowerKey === 'title'
+          ) {
+            const nameStr = String(val || '').trim();
+            if (nameStr && !normalizedRow.name) {
+              normalizedRow.name = nameStr;
+            }
+          } else if (
+            lowerKey === 'phone' ||
+            lowerKey === 'mobile' ||
+            lowerKey === 'number' ||
+            lowerKey === 'contact' ||
+            lowerKey === 'cell' ||
+            lowerKey === 'phonenumber' ||
+            lowerKey === 'tel' ||
+            lowerKey === 'msisdn'
+          ) {
+            normalizedRow.phone = String(val || '').trim();
+          } else if (
+            lowerKey === 'email' ||
+            lowerKey === 'mail' ||
+            lowerKey === 'emailaddress'
+          ) {
+            normalizedRow.email = String(val || '').trim();
+          } else if (
+            lowerKey === 'age' ||
+            lowerKey === 'years'
+          ) {
+            const numAge = parseInt(val, 10);
+            if (!isNaN(numAge)) normalizedRow.age = numAge;
+          } else if (
+            lowerKey === 'gender' ||
+            lowerKey === 'sex'
+          ) {
+            const gStr = String(val || '').trim().toLowerCase();
+            if (gStr.startsWith('m')) normalizedRow.gender = 'Male';
+            else if (gStr.startsWith('f')) normalizedRow.gender = 'Female';
+            else normalizedRow.gender = 'Other';
+          } else if (
+            lowerKey === 'avatartype' ||
+            lowerKey === 'avatar' ||
+            lowerKey === 'avatarurl' ||
+            lowerKey === 'photo' ||
+            lowerKey === 'image' ||
+            lowerKey === 'picture' ||
+            lowerKey === 'userphoto'
+          ) {
+            const avatarVal = String(val || '').trim();
+            if (avatarVal.startsWith('http://') || avatarVal.startsWith('https://')) {
+              normalizedRow.avatarUrl = avatarVal;
+              normalizedRow.avatarOriginalUrl = avatarVal;
+              normalizedRow.avatarType = 'With Avatar';
+            } else if (avatarVal) {
+              normalizedRow.avatarType = avatarVal;
+            }
+          } else if (
+            lowerKey === 'activedays' ||
+            lowerKey === 'days' ||
+            lowerKey === 'active' ||
+            lowerKey === 'activeday'
+          ) {
+            const numDays = parseInt(val, 10);
+            if (!isNaN(numDays)) normalizedRow.activeDays = numDays;
+          } else if (
+            lowerKey === 'lastonline' ||
+            lowerKey === 'lastonlinetime' ||
+            lowerKey === 'lastactive' ||
+            lowerKey === 'online' ||
+            lowerKey === 'date' ||
+            lowerKey === 'timestamp'
+          ) {
+            const parsedDate = new Date(val);
+            if (!isNaN(parsedDate.getTime())) normalizedRow.lastActive = parsedDate;
+          } else if (
+            lowerKey === 'location' ||
+            lowerKey === 'district' ||
+            lowerKey === 'city' ||
+            lowerKey === 'division' ||
+            lowerKey === 'state' ||
+            lowerKey === 'country'
+          ) {
+            normalizedRow.location = String(val || '').trim();
+          } else if (
+            lowerKey === 'area' ||
+            lowerKey === 'thana' ||
+            lowerKey === 'zone'
+          ) {
+            normalizedRow.area = String(val || '').trim();
+          } else if (
+            lowerKey === 'address' ||
+            lowerKey === 'fulladdress'
+          ) {
+            normalizedRow.address = String(val || '').trim();
+          } else if (
+            lowerKey === 'status' ||
+            lowerKey === 'state'
+          ) {
+            const sVal = String(val || '').trim();
+            normalizedRow.status = ['Active', 'Inactive', 'Pending', 'Suspended'].includes(sVal) ? sVal : 'Active';
+          } else if (
+            lowerKey === 'tag' ||
+            lowerKey === 'tags' ||
+            lowerKey === 'label' ||
+            lowerKey === 'labels' ||
+            lowerKey === 'badge'
+          ) {
+            const tagVal = String(val || '').trim();
+            if (tagVal) {
+              tagVal.split(',').forEach((t) => {
+                const ct = t.trim();
+                if (ct && !normalizedRow.tags.includes(ct)) normalizedRow.tags.push(ct);
+              });
+            }
+          } else if (
+            lowerKey === 'category' ||
+            lowerKey === 'group' ||
+            lowerKey === 'segment'
+          ) {
+            normalizedRow.category = String(val || '').trim();
+          } else {
+            normalizedRow.customFields[key] = val;
+          }
+        });
+      }
 
       // Single column auto-detection
       if (!normalizedRow.phone) {

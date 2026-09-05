@@ -29,7 +29,8 @@ export default function UploadDataPage() {
     filename: string,
     rows: any[],
     fileSize: string,
-    tags?: string[] | string
+    tags?: string[] | string,
+    columnMapping?: Record<string, string>
   ) => {
     setUploadStage('uploading');
     setErrorMessage('');
@@ -38,6 +39,8 @@ export default function UploadDataPage() {
     setCurrentStep(2); // Stage 2: Validating
     await sleep(400);
     setCurrentStep(3); // Stage 3: Normalizing & Matching
+    await sleep(300);
+    setCurrentStep(4); // Stage 4: Merging & Updating MongoDB
 
     try {
       const tagsArray = Array.isArray(tags)
@@ -55,6 +58,7 @@ export default function UploadDataPage() {
           fileSize,
           tags: tagsArray,
           customTag: tagsArray[0] || '',
+          columnMapping,
         }),
       });
 

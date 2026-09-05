@@ -19,9 +19,16 @@ import {
 } from 'lucide-react';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
+import { ColumnMappingStudio, getAutoSuggestedField } from './ColumnMappingStudio';
 
 interface DropZoneProps {
-  onFileParsed: (filename: string, rows: any[], fileSize: string, tags?: string[]) => void;
+  onFileParsed: (
+    filename: string,
+    rows: any[],
+    fileSize: string,
+    tags?: string[],
+    columnMapping?: Record<string, string>
+  ) => void;
   isProcessing?: boolean;
 }
 
@@ -222,6 +229,11 @@ export function DropZone({ onFileParsed, isProcessing }: DropZoneProps) {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [newTagInput, setNewTagInput] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+
+  // Custom Column Mapping State
+  const [columnMapping, setColumnMapping] = useState<Record<string, string>>({});
+  const [isMappingStudioOpen, setIsMappingStudioOpen] = useState(false);
+
   const inputRef = useRef<HTMLInputElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
 
@@ -276,6 +288,17 @@ export function DropZone({ onFileParsed, isProcessing }: DropZoneProps) {
       analysis,
     });
     setSelectedFilterOption('ALL');
+
+    // Auto-detect initial column mappings
+    const initialMapping: Record<string, string> = {};
+    analysis.columnNames.forEach((col) => {
+      const samples = rows
+        .map((r) => r[col])
+        .filter((v) => v !== null && v !== undefined && String(v).trim() !== '');
+      initialMapping[col] = getAutoSuggestedField(col, samples);
+    });
+    setColumnMapping(initialMapping);
+    setIsMappingStudioOpen(analysis.columnNames.length > 2);
 
     // Smart tag suggestions
     const lowerName = fileName.toLowerCase();
@@ -389,7 +412,13 @@ export function DropZone({ onFileParsed, isProcessing }: DropZoneProps) {
         setError('No rows match the selected filter criteria.');
         return;
       }
-      onFileParsed(selectedFile.name, rowsToSubmit, selectedFile.size, selectedTags);
+      onFileParsed(
+        selectedFile.name,
+        rowsToSubmit,
+        selectedFile.size,
+        selectedTags,
+        columnMapping
+      );
     }
   };
 
@@ -553,7 +582,19 @@ export function DropZone({ onFileParsed, isProcessing }: DropZoneProps) {
             </div>
           )}
 
-          {/* 3. MULTI-TAG & BATCH LABEL MANAGER */}
+          {/* 3. CUSTOM COLUMN MAPPING STUDIO */}
+          {selectedFile.analysis.columnNames.length > 0 && (
+            <ColumnMappingStudio
+              columnNames={selectedFile.analysis.columnNames}
+              sampleRows={selectedFile.rows}
+              mapping={columnMapping}
+              onMappingChange={setColumnMapping}
+              isOpen={isMappingStudioOpen}
+              onToggleOpen={() => setIsMappingStudioOpen(!isMappingStudioOpen)}
+            />
+          )}
+
+          {/* 4. MULTI-TAG & BATCH LABEL MANAGER */}
           <div className="p-5 rounded-2xl bg-gradient-to-br from-brand-50/60 to-indigo-50/40 dark:from-brand-950/30 dark:to-indigo-950/20 border border-brand-200/80 dark:border-brand-900/60 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
@@ -683,6 +724,8 @@ export function DropZone({ onFileParsed, isProcessing }: DropZoneProps) {
                 setSelectedFile(null);
                 setSelectedTags([]);
                 setSelectedFilterOption('ALL');
+                setColumnMapping({});
+                setIsMappingStudioOpen(false);
                 setNewTagInput('');
                 if (inputRef.current) inputRef.current.value = '';
               }}
