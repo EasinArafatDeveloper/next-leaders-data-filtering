@@ -775,31 +775,35 @@ export default function SettingsPage() {
                       {connectedDevices.map((dev) => (
                         <div
                           key={dev.id}
-                          className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200/90 dark:border-slate-800 shadow-sm flex items-start justify-between gap-3 hover:border-emerald-300 dark:hover:border-emerald-900 transition-all group"
+                          className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200/90 dark:border-slate-800 shadow-sm flex items-center justify-between gap-3 hover:border-emerald-400 dark:hover:border-emerald-700 transition-all"
                         >
-                          <div className="flex items-start gap-3">
-                            <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-900/60 shrink-0">
+                          {/* Left Details */}
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-900/80 flex items-center justify-center shrink-0 shadow-2xs">
                               {dev.deviceType === 'desktop' ? (
-                                <Laptop className="w-4 h-4" />
+                                <Laptop className="w-5 h-5 shrink-0" />
                               ) : (
-                                <Smartphone className="w-4 h-4" />
+                                <Smartphone className="w-5 h-5 shrink-0" />
                               )}
                             </div>
-                            <div className="space-y-0.5">
-                              <h5 className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                            <div className="min-w-0 flex-1">
+                              <h5 className="text-xs font-bold text-gray-900 dark:text-white truncate">
                                 {dev.name}
                               </h5>
-                              <div className="flex items-center gap-2 text-[10px] text-gray-500 dark:text-gray-400">
-                                <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
-                                  <CheckCheck className="w-3 h-3" /> Synchronized
+                              <div className="flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                                <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+                                  <CheckCheck className="w-3.5 h-3.5 shrink-0" /> Synchronized
                                 </span>
                                 <span>&bull;</span>
-                                <span>{dev.deviceType.toUpperCase()}</span>
+                                <span className="uppercase text-[10px] font-mono tracking-wider font-semibold">
+                                  {dev.deviceType}
+                                </span>
                               </div>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                          {/* Right Action Buttons */}
+                          <div className="flex items-center gap-1.5 shrink-0">
                             <button
                               type="button"
                               onClick={() => {
@@ -808,29 +812,29 @@ export default function SettingsPage() {
                                 setDeviceTypeInput(dev.deviceType);
                                 setIsDeviceModalOpen(true);
                               }}
-                              className="p-1.5 rounded-lg text-gray-400 hover:text-brand-600 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
+                              className="w-8 h-8 rounded-xl bg-gray-50 hover:bg-brand-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-600 hover:text-brand-600 dark:text-gray-300 dark:hover:text-brand-400 border border-gray-200 dark:border-slate-700 flex items-center justify-center transition-colors shadow-2xs shrink-0 cursor-pointer"
                               title="Rename Device"
                             >
-                              <Edit2 className="w-3.5 h-3.5" />
+                              <Edit2 className="w-4 h-4 shrink-0" />
                             </button>
 
                             <button
                               type="button"
                               onClick={() => handleOpenShareQr(dev)}
-                              className="p-1.5 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
-                              title="Show QR Code to link this device"
+                              className="w-8 h-8 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 flex items-center justify-center transition-colors shadow-2xs shrink-0 cursor-pointer"
+                              title="Show QR Code to link this phone"
                             >
-                              <QrCode className="w-3.5 h-3.5" />
+                              <QrCode className="w-4 h-4 shrink-0" />
                             </button>
 
                             {connectedDevices.length > 1 && (
                               <button
                                 type="button"
                                 onClick={() => handleRemoveDevice(dev)}
-                                className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 transition-colors"
-                                title="Remove Label"
+                                className="w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900 flex items-center justify-center transition-colors shadow-2xs shrink-0 cursor-pointer"
+                                title="Remove Phone Label"
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <Trash2 className="w-4 h-4 shrink-0" />
                               </button>
                             )}
                           </div>
