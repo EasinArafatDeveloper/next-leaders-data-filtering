@@ -25,6 +25,14 @@ import {
   AlertTriangle,
   FileText,
   Sparkles,
+  Plus,
+  Edit2,
+  Share2,
+  Laptop,
+  Tablet,
+  Globe,
+  Radio,
+  CheckCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTheme } from '@/components/theme/ThemeProvider';
@@ -37,6 +45,14 @@ interface TwoFactorStatus {
   enabled: boolean;
   createdAt: string | null;
   backupCodesCount: number;
+}
+
+interface TwoFactorDevice {
+  id: string;
+  name: string;
+  deviceType: 'iphone' | 'android' | 'desktop' | 'phone';
+  addedAt: string;
+  status: 'active' | 'revoked';
 }
 
 export default function SettingsPage() {
@@ -61,6 +77,8 @@ export default function SettingsPage() {
   // Two-Factor Authentication (2FA) State
   const [twoFactorStatus, setTwoFactorStatus] = useState<TwoFactorStatus | null>(null);
   const [isLoading2FAStatus, setIsLoading2FAStatus] = useState(false);
+  const [connectedDevices, setConnectedDevices] = useState<TwoFactorDevice[]>([]);
+  const [isLoadingDevices, setIsLoadingDevices] = useState(false);
 
   // 2FA Setup Modal State
   const [isSetupModalOpen, setIsSetupModalOpen] = useState(false);
@@ -75,11 +93,53 @@ export default function SettingsPage() {
   const [hasCopiedSecret, setHasCopiedSecret] = useState(false);
   const [hasCopiedBackupCodes, setHasCopiedBackupCodes] = useState(false);
 
+  // Add / Edit Device Label Modal State
+  const [isDeviceModalOpen, setIsDeviceModalOpen] = useState(false);
+  const [editingDevice, setEditingDevice] = useState<TwoFactorDevice | null>(null);
+  const [deviceNameInput, setDeviceNameInput] = useState('');
+  const [deviceTypeInput, setDeviceTypeInput] = useState<'iphone' | 'android' | 'desktop' | 'phone'>('iphone');
+  const [isSavingDevice, setIsSavingDevice] = useState(false);
+
+  // Share QR Drawer / Modal (e.g. for Boss's Phone)
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [targetDeviceForShare, setTargetDeviceForShare] = useState<TwoFactorDevice | null>(null);
+
   // 2FA Disable Modal State
   const [isDisableModalOpen, setIsDisableModalOpen] = useState(false);
   const [disablePassword, setDisablePassword] = useState('');
   const [disableCode, setDisableCode] = useState('');
   const [isDisabling2FA, setIsDisabling2FA] = useState(false);
+
+  // Client-side Browser / OS Detection
+  const [clientDeviceInfo, setClientDeviceInfo] = useState({
+    browser: 'Chrome / Webkit',
+    os: 'Windows / Mac / Android',
+    deviceCategory: 'Desktop PC',
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.navigator) {
+      const ua = navigator.userAgent;
+      let browser = 'Modern Browser';
+      if (ua.includes('Chrome') && !ua.includes('Edg')) browser = 'Google Chrome';
+      else if (ua.includes('Edg')) browser = 'Microsoft Edge';
+      else if (ua.includes('Firefox')) browser = 'Mozilla Firefox';
+      else if (ua.includes('Safari') && !ua.includes('Chrome')) browser = 'Apple Safari';
+
+      let os = 'Windows 11 / 10';
+      if (ua.includes('Macintosh')) os = 'macOS';
+      else if (ua.includes('iPhone')) os = 'iOS (iPhone)';
+      else if (ua.includes('iPad')) os = 'iPadOS';
+      else if (ua.includes('Android')) os = 'Android Mobile';
+      else if (ua.includes('Linux')) os = 'Linux';
+
+      let devCat = 'Desktop Workstation';
+      if (/iPhone|Android|Mobile/i.test(ua)) devCat = 'Mobile Smartphone';
+      else if (/iPad|Tablet/i.test(ua)) devCat = 'Tablet';
+
+      setClientDeviceInfo({ browser, os, deviceCategory: devCat });
+    }
+  }, []);
 
   const [archiveStats, setArchiveStats] = useState<{
     totalWithAvatar: number;
@@ -91,7 +151,7 @@ export default function SettingsPage() {
   const [isArchiving, setIsArchiving] = useState(false);
   const [archiveProgressText, setArchiveProgressText] = useState('');
 
-  // Fetch 2FA status
+  // Fetch 2FA status and devices
   const fetch2FAStatus = async () => {
     setIsLoading2FAStatus(true);
     try {
@@ -107,9 +167,25 @@ export default function SettingsPage() {
     }
   };
 
+  const fetchConnectedDevices = async () => {
+    setIsLoadingDevices(true);
+    try {
+      const res = await fetch('/api/auth/2fa/devices');
+      if (res.ok) {
+        const data = await res.json();
+        setConnectedDevices(data.devices || []);
+      }
+    } catch {
+      // Ignore
+    } finally {
+      setIsLoadingDevices(false);
+    }
+  };
+
   useEffect(() => {
     if (activeSection === 'security') {
       fetch2FAStatus();
+      fetchConnectedDevices();
     }
     if (activeSection === 'dataset') {
       fetch('/api/data/archive-avatars')
@@ -147,6 +223,27 @@ export default function SettingsPage() {
     }
   };
 
+  // Open QR for adding/sharing device (Boss or 2nd phone)
+  const handleOpenShareQr = async (device?: TwoFactorDevice) => {
+    setTargetDeviceForShare(device || null);
+    setIsInitializingSetup(true);
+    setIsShareModalOpen(true);
+    try {
+      const res = await fetch('/api/auth/2fa/setup', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to generate QR');
+
+      setSetupQrCode(data.qrCodeDataUrl);
+      setSetupSecretKey(data.secretKey);
+      setSetupAccountName(data.accountName);
+    } catch (err: any) {
+      toast.error(err.message || 'Could not load QR.');
+      setIsShareModalOpen(false);
+    } finally {
+      setIsInitializingSetup(false);
+    }
+  };
+
   // Confirm 2FA with first 6-digit code
   const handleConfirm2FA = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,10 +266,84 @@ export default function SettingsPage() {
       setSetupStep(3);
       toast.success('Two-Factor Authentication is now enabled!');
       fetch2FAStatus();
+      fetchConnectedDevices();
     } catch (err: any) {
       toast.error(err.message || 'Verification failed. Please check the 6-digit code.');
     } finally {
       setIsConfirming2FA(false);
+    }
+  };
+
+  // Save or Update Device Label
+  const handleSaveDevice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!deviceNameInput.trim()) {
+      toast.error('Please enter a name for this phone/device.');
+      return;
+    }
+
+    setIsSavingDevice(true);
+    try {
+      if (editingDevice) {
+        // PUT update
+        const res = await fetch('/api/auth/2fa/devices', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: editingDevice.id,
+            name: deviceNameInput.trim(),
+            deviceType: deviceTypeInput,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Update failed');
+        setConnectedDevices(data.devices || []);
+        toast.success(`Device renamed to "${deviceNameInput.trim()}"!`);
+      } else {
+        // POST new device
+        const res = await fetch('/api/auth/2fa/devices', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: deviceNameInput.trim(),
+            deviceType: deviceTypeInput,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Add failed');
+        setConnectedDevices(data.devices || []);
+        toast.success(`"${deviceNameInput.trim()}" registered to 2FA devices!`);
+      }
+
+      setIsDeviceModalOpen(false);
+      setEditingDevice(null);
+      setDeviceNameInput('');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save device label.');
+    } finally {
+      setIsSavingDevice(false);
+    }
+  };
+
+  // Remove Device
+  const handleRemoveDevice = async (device: TwoFactorDevice) => {
+    if (!confirm(`Are you sure you want to remove "${device.name}" from authorized 2FA devices?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/auth/2fa/devices', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: device.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Delete failed');
+
+      setConnectedDevices(data.devices || []);
+      toast.success(`"${device.name}" removed from device list.`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to remove device.');
     }
   };
 
@@ -202,6 +373,7 @@ export default function SettingsPage() {
       setDisablePassword('');
       setDisableCode('');
       fetch2FAStatus();
+      setConnectedDevices([]);
     } catch (err: any) {
       toast.error(err.message || 'Failed to disable 2FA.');
     } finally {
@@ -291,11 +463,11 @@ export default function SettingsPage() {
   };
 
   const sections = [
-    { id: 'profile' as SettingsSection, label: 'Profile', icon: User },
-    { id: 'security' as SettingsSection, label: 'Security & 2FA', icon: Shield },
+    { id: 'profile' as SettingsSection, label: 'Profile Details', icon: User },
+    { id: 'security' as SettingsSection, label: 'Security & 2FA Devices', icon: Shield },
     { id: 'dataset' as SettingsSection, label: 'Dataset & Storage', icon: Database },
-    { id: 'export' as SettingsSection, label: 'Export', icon: Download },
-    { id: 'system' as SettingsSection, label: 'System', icon: Monitor },
+    { id: 'export' as SettingsSection, label: 'Export Preferences', icon: Download },
+    { id: 'system' as SettingsSection, label: 'System Environment', icon: Monitor },
   ];
 
   const handleResetDataset = async () => {
@@ -419,16 +591,16 @@ export default function SettingsPage() {
       <div className="flex flex-col md:flex-row gap-6">
         {/* Settings Sidebar Tabs */}
         <aside className="md:w-60 shrink-0">
-          <div className="p-2 bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 rounded-2xl shadow-sm space-y-1">
+          <div className="p-2.5 bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 rounded-3xl shadow-sm space-y-1">
             {sections.map((s) => {
               const Icon = s.icon;
               return (
                 <button
                   key={s.id}
                   onClick={() => setActiveSection(s.id)}
-                  className={`w-full flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                  className={`w-full flex items-center gap-2.5 px-4 py-3 rounded-2xl text-xs font-semibold transition-all ${
                     activeSection === s.id
-                      ? 'bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+                      ? 'bg-brand-600 text-white font-bold shadow-md shadow-brand-600/25'
                       : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800'
                   }`}
                 >
@@ -441,10 +613,10 @@ export default function SettingsPage() {
         </aside>
 
         {/* Settings Content Area */}
-        <div className="flex-1 space-y-5">
+        <div className="flex-1 space-y-6">
           {/* Profile Section */}
           {activeSection === 'profile' && (
-            <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-card space-y-6">
+            <div className="p-7 rounded-3xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-card space-y-6">
               <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <User className="w-4 h-4 text-brand-600" /> Profile Details
               </h3>
@@ -488,7 +660,7 @@ export default function SettingsPage() {
                   onClick={() => setActiveSection('security')}
                   className="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold shadow-md shadow-brand-600/20 transition-all flex items-center gap-2"
                 >
-                  <Shield className="w-4 h-4" /> Manage Security & 2FA
+                  <Shield className="w-4 h-4" /> Manage Security & 2FA Phones
                 </button>
               </div>
             </div>
@@ -496,22 +668,22 @@ export default function SettingsPage() {
 
           {/* Security & 2FA Section */}
           {activeSection === 'security' && (
-            <div className="space-y-5">
+            <div className="space-y-6">
               {/* 1. GOOGLE AUTHENTICATOR (2FA) CARD */}
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-850 border border-gray-200/90 dark:border-slate-800 shadow-card space-y-5">
+              <div className="p-7 rounded-3xl bg-white dark:bg-slate-900 border border-gray-200/90 dark:border-slate-800 shadow-card space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-500/10 to-teal-500/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500/10 via-teal-500/20 to-emerald-400/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 shadow-inner">
                       <Smartphone className="w-6 h-6" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-bold text-gray-900 dark:text-white">
-                          Two-Factor Authentication (Google Authenticator)
+                        <h3 className="text-base font-bold text-gray-900 dark:text-white">
+                          Two-Factor Authentication (2FA)
                         </h3>
                         {twoFactorStatus?.enabled ? (
-                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 font-bold text-[10px] flex items-center gap-1 border border-emerald-200 dark:border-emerald-800">
-                            <CheckCircle2 className="w-3 h-3" /> Active
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 font-bold text-[10px] flex items-center gap-1 border border-emerald-200 dark:border-emerald-800">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Active Protection
                           </span>
                         ) : (
                           <span className="px-2.5 py-0.5 rounded-full bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400 font-bold text-[10px] border border-gray-200 dark:border-slate-700">
@@ -520,20 +692,32 @@ export default function SettingsPage() {
                         )}
                       </div>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        Require a dynamic 6-digit verification code from your mobile device every time you log in.
+                        Protects your dashboard with time-synchronized dynamic 6-digit passcodes.
                       </p>
                     </div>
                   </div>
 
-                  <div className="self-start sm:self-center">
+                  <div className="self-start sm:self-center flex items-center gap-2">
                     {twoFactorStatus?.enabled ? (
-                      <button
-                        type="button"
-                        onClick={() => setIsDisableModalOpen(true)}
-                        className="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 text-xs font-bold transition-all shadow-2xs"
-                      >
-                        Disable 2FA
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenShareQr()}
+                          className="px-3.5 py-2 rounded-xl bg-brand-50 hover:bg-brand-100 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-900/60 text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                          title="Show QR Code to link Boss's phone or 2nd device"
+                        >
+                          <QrCode className="w-3.5 h-3.5 text-brand-600" />
+                          <span>Link 2nd Phone / Boss</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setIsDisableModalOpen(true)}
+                          className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 text-xs font-bold transition-all shadow-2xs"
+                        >
+                          Disable 2FA
+                        </button>
+                      </>
                     ) : (
                       <button
                         type="button"
@@ -557,33 +741,167 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
+                {/* 2FA DEVICES LIST & MULTI-PHONE MANAGER */}
                 {twoFactorStatus?.enabled && (
-                  <div className="p-3.5 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-900/60 text-xs text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>
-                        Your administrator account is protected with RFC 6238 TOTP Two-Factor Authentication.
-                      </span>
+                  <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-50 to-emerald-50/30 dark:from-slate-850 dark:to-emerald-950/20 border border-gray-200/80 dark:border-slate-800 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <h4 className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                          <Radio className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
+                          Authorized 2FA Devices & Team Phones ({connectedDevices.length})
+                        </h4>
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                          Both your phone and your boss&apos;s phone generate synchronized 6-digit codes simultaneously.
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingDevice(null);
+                          setDeviceNameInput('');
+                          setDeviceTypeInput('iphone');
+                          setIsDeviceModalOpen(true);
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-brand-600 dark:text-brand-400 text-xs font-bold hover:bg-brand-50 transition-all flex items-center gap-1.5 shadow-2xs self-start sm:self-center"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Phone Label</span>
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleStartSetup2FA}
-                      className="text-emerald-700 dark:text-emerald-300 underline font-bold hover:text-emerald-900 transition-colors shrink-0"
-                    >
-                      Re-scan QR / New Device
-                    </button>
+
+                    {/* Devices Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      {connectedDevices.map((dev) => (
+                        <div
+                          key={dev.id}
+                          className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200/90 dark:border-slate-800 shadow-sm flex items-start justify-between gap-3 hover:border-emerald-300 dark:hover:border-emerald-900 transition-all group"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-900/60 shrink-0">
+                              {dev.deviceType === 'desktop' ? (
+                                <Laptop className="w-4 h-4" />
+                              ) : (
+                                <Smartphone className="w-4 h-4" />
+                              )}
+                            </div>
+                            <div className="space-y-0.5">
+                              <h5 className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                                {dev.name}
+                              </h5>
+                              <div className="flex items-center gap-2 text-[10px] text-gray-500 dark:text-gray-400">
+                                <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+                                  <CheckCheck className="w-3 h-3" /> Synchronized
+                                </span>
+                                <span>&bull;</span>
+                                <span>{dev.deviceType.toUpperCase()}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingDevice(dev);
+                                setDeviceNameInput(dev.name);
+                                setDeviceTypeInput(dev.deviceType);
+                                setIsDeviceModalOpen(true);
+                              }}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-brand-600 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
+                              title="Rename Device"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleOpenShareQr(dev)}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
+                              title="Show QR Code to link this device"
+                            >
+                              <QrCode className="w-3.5 h-3.5" />
+                            </button>
+
+                            {connectedDevices.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveDevice(dev)}
+                                className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 transition-colors"
+                                title="Remove Label"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* 2. CHANGE PASSWORD CARD */}
-              <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-card space-y-6">
+              {/* 2. ACTIVE BROWSER & OS INTELLIGENCE CARD */}
+              <div className="p-7 rounded-3xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-card space-y-4">
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" /> Active Session & Hardware Details
+                </h3>
+
+                <div className="space-y-3 text-xs">
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-gray-100 dark:border-slate-800 flex items-center justify-between">
+                    <div className="flex items-center gap-3.5">
+                      <div className="p-2.5 rounded-xl bg-brand-100 dark:bg-brand-950 text-brand-600 dark:text-brand-400 shrink-0">
+                        <Monitor className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                          <span>{clientDeviceInfo.os} &bull; {clientDeviceInfo.browser}</span>
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold text-[10px]">
+                            Current Active Session
+                          </span>
+                        </p>
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                          Authenticated as <strong>@{user?.username || 'admin'}</strong> via Encrypted HttpOnly JWT
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div className="p-3.5 rounded-2xl bg-gray-50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-800 space-y-1">
+                      <p className="text-[11px] font-bold text-gray-500 uppercase">Brute-Force Guard</p>
+                      <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                        Active (Auto-lock after 5 invalid attempts)
+                      </p>
+                    </div>
+                    <div className="p-3.5 rounded-2xl bg-gray-50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-800 space-y-1">
+                      <p className="text-[11px] font-bold text-gray-500 uppercase">Route Interceptor</p>
+                      <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                        Edge Middleware 2FA Guard Active
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => logout()}
+                      className="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/60 text-xs font-semibold transition-all flex items-center gap-1.5"
+                    >
+                      <LogOut className="w-3.5 h-3.5" /> Sign Out From All Devices
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. CHANGE PASSWORD CARD */}
+              <div className="p-7 rounded-3xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-card space-y-6">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                     <KeyRound className="w-4 h-4 text-brand-600" /> Change Administrator Password
                   </h3>
                   <span className="text-[11px] px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-200 dark:border-emerald-900/60 flex items-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5" /> BCrypt Protected
+                    <ShieldCheck className="w-3.5 h-3.5" /> BCrypt Salt-10
                   </span>
                 </div>
 
@@ -669,63 +987,14 @@ export default function SettingsPage() {
                   </button>
                 </form>
               </div>
-
-              {/* 3. ACTIVE SESSION & PROTECTIONS CARD */}
-              <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-card space-y-4">
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" /> Active Session & Protections
-                </h3>
-
-                <div className="space-y-3 text-xs">
-                  <div className="p-3 rounded-xl bg-gray-50 dark:bg-slate-800/70 border border-gray-100 dark:border-slate-800 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-brand-100 dark:bg-brand-950 text-brand-600 dark:text-brand-400">
-                        <Smartphone className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-gray-900 dark:text-white">Current Browser Session</p>
-                        <p className="text-[11px] text-gray-500">Authenticated via Secure HttpOnly JWT Token</p>
-                      </div>
-                    </div>
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold text-[10px]">
-                      Active
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                    <div className="p-3 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-800 space-y-1">
-                      <p className="text-[11px] font-bold text-gray-500 uppercase">Brute-Force Guard</p>
-                      <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                        Active (Auto-lock after 5 attempts)
-                      </p>
-                    </div>
-                    <div className="p-3 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-800 space-y-1">
-                      <p className="text-[11px] font-bold text-gray-500 uppercase">Route Interceptor</p>
-                      <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                        Next.js Server Middleware Guard
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="pt-2 flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => logout()}
-                      className="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/60 text-xs font-semibold transition-all flex items-center gap-1.5"
-                    >
-                      <LogOut className="w-3.5 h-3.5" /> Sign Out From All Devices
-                    </button>
-                  </div>
-                </div>
-              </div>
             </div>
           )}
 
           {/* Dataset Management Section */}
           {activeSection === 'dataset' && (
-            <div className="space-y-5">
+            <div className="space-y-6">
               {/* Permanent Avatar Archiver & Local Backup Card */}
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-50/70 to-brand-50/50 dark:from-slate-900 dark:to-indigo-950/20 border border-brand-200/80 dark:border-brand-900/60 shadow-card space-y-5">
+              <div className="p-7 rounded-3xl bg-gradient-to-br from-indigo-50/70 to-brand-50/50 dark:from-slate-900 dark:to-indigo-950/20 border border-brand-200/80 dark:border-brand-900/60 shadow-card space-y-5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -814,7 +1083,7 @@ export default function SettingsPage() {
               </div>
 
               {/* Seed Demo Dataset Card */}
-              <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-card space-y-4">
+              <div className="p-7 rounded-3xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-card space-y-4">
                 <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                   <Zap className="w-4 h-4 text-brand-600" /> Seed Demo Dataset
                 </h3>
@@ -831,7 +1100,7 @@ export default function SettingsPage() {
               </div>
 
               {/* Reset Dataset Card */}
-              <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/60 shadow-card space-y-4">
+              <div className="p-7 rounded-3xl bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/60 shadow-card space-y-4">
                 <h3 className="text-sm font-bold text-rose-700 dark:text-rose-400 flex items-center gap-2">
                   <Trash2 className="w-4 h-4" /> Reset & Clear Dataset
                 </h3>
@@ -851,7 +1120,7 @@ export default function SettingsPage() {
 
           {/* Export Preferences */}
           {activeSection === 'export' && (
-            <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-card space-y-6">
+            <div className="p-7 rounded-3xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-card space-y-6">
               <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <Download className="w-4 h-4 text-brand-600" /> Export Preferences
               </h3>
@@ -899,7 +1168,7 @@ export default function SettingsPage() {
 
           {/* System Section */}
           {activeSection === 'system' && (
-            <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-card space-y-6">
+            <div className="p-7 rounded-3xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-card space-y-6">
               <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <Monitor className="w-4 h-4 text-brand-600" /> System & Security Environment
               </h3>
@@ -933,7 +1202,7 @@ export default function SettingsPage() {
                 <div className="py-3 px-4 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 space-y-2 text-xs">
                   {[
                     { label: 'Application', value: 'DATAFLOW v1.0.0' },
-                    { label: 'Two-Factor Auth', value: 'RFC 6238 TOTP (Google Authenticator)' },
+                    { label: 'Two-Factor Auth', value: 'RFC 6238 TOTP (Multi-Device Synchronized)' },
                     { label: 'Auth Guard', value: 'Next.js Edge Middleware + JWT' },
                     { label: 'Password Encryption', value: 'BCrypt Salt-Rounds 10' },
                     { label: 'Database', value: 'MongoDB Atlas (Mongoose)' },
@@ -1000,7 +1269,7 @@ export default function SettingsPage() {
                     <ol className="list-decimal list-inside space-y-0.5 text-[11px] text-emerald-700 dark:text-emerald-300">
                       <li>Open the <strong>Google Authenticator</strong> app on your mobile phone.</li>
                       <li>Tap the <strong>+</strong> button and choose <strong>Scan a QR code</strong>.</li>
-                      <li>Point your phone camera at the QR code below.</li>
+                      <li>Point your phone camera at the QR code below. (Both you and your boss can scan this).</li>
                     </ol>
                   </div>
 
@@ -1192,6 +1461,181 @@ export default function SettingsPage() {
         </div>
       )}
 
+      {/* SHARE QR CODE FOR BOSS'S PHONE / 2ND DEVICE MODAL */}
+      {isShareModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-2xl overflow-hidden p-6 space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <Smartphone className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-gray-900 dark:text-white">
+                    Link Boss&apos;s Phone / 2nd Device
+                  </h4>
+                  <p className="text-[11px] text-gray-500">
+                    {targetDeviceForShare ? targetDeviceForShare.name : 'Synchronize Google Authenticator'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsShareModalOpen(false)}
+                className="w-7 h-7 rounded-full bg-gray-100 dark:bg-slate-800 text-gray-500 hover:text-gray-900 dark:hover:text-white flex items-center justify-center text-base"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 text-xs text-emerald-800 dark:text-emerald-300 space-y-1">
+              <p className="font-bold flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-emerald-600" /> How to connect:
+              </p>
+              <p className="text-[11px] leading-relaxed">
+                Open <strong>Google Authenticator</strong> on your boss&apos;s phone, tap <strong>+ &rarr; Scan a QR code</strong>, and scan the QR code below. Both phones will now show the identical code!
+              </p>
+            </div>
+
+            {/* QR Code Container */}
+            <div className="flex flex-col items-center justify-center py-2">
+              {setupQrCode ? (
+                <div className="p-3 bg-white rounded-2xl border-2 border-emerald-500/40 shadow-md inline-block">
+                  <img
+                    src={setupQrCode}
+                    alt="Google Authenticator QR Code"
+                    width={180}
+                    height={180}
+                    className="w-40 h-40 object-contain rounded-lg"
+                  />
+                </div>
+              ) : (
+                <div className="w-40 h-40 rounded-2xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
+                  <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
+                </div>
+              )}
+            </div>
+
+            {/* Manual Secret Key */}
+            <div className="p-3 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase text-gray-500">
+                  Or Send Key to Boss:
+                </span>
+                <button
+                  type="button"
+                  onClick={handleCopySecretKey}
+                  className="text-brand-600 dark:text-brand-400 text-[11px] font-bold flex items-center gap-1 hover:underline"
+                >
+                  {hasCopiedSecret ? (
+                    <>
+                      <Check className="w-3 h-3 text-emerald-600" /> Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3 h-3" /> Copy Key
+                    </>
+                  )}
+                </button>
+              </div>
+              <code className="block font-mono text-xs font-bold text-gray-900 dark:text-gray-100 tracking-wider break-all select-all">
+                {setupSecretKey || 'Loading...'}
+              </code>
+            </div>
+
+            <div className="pt-1 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setIsShareModalOpen(false)}
+                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADD / EDIT DEVICE MODAL */}
+      {isDeviceModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-2xl overflow-hidden p-6 space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 border-b border-gray-100 dark:border-slate-800 pb-3">
+              <div className="w-9 h-9 rounded-xl bg-brand-100 dark:bg-brand-950 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
+                <Smartphone className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-gray-900 dark:text-white">
+                  {editingDevice ? 'Rename Phone / Device' : 'Add New 2FA Phone Label'}
+                </h4>
+                <p className="text-[11px] text-gray-500">
+                  Label the phone so you know who has access to the 2FA code.
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveDevice} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-500 uppercase">
+                  Phone / Device Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={deviceNameInput}
+                  onChange={(e) => setDeviceNameInput(e.target.value)}
+                  placeholder="e.g. Boss's Phone (iPhone 15), Easin's Samsung"
+                  className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-500 uppercase">
+                  Device Type
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'iphone' as const, label: '📱 iPhone', icon: Smartphone },
+                    { id: 'android' as const, label: '📱 Android', icon: Smartphone },
+                    { id: 'desktop' as const, label: '💻 Computer', icon: Laptop },
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setDeviceTypeInput(t.id)}
+                      className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                        deviceTypeInput === t.id
+                          ? 'bg-brand-600 text-white border-brand-600 shadow-sm'
+                          : 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300'
+                      }`}
+                    >
+                      <span>{t.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsDeviceModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-semibold text-gray-600 dark:text-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingDevice}
+                  className="px-5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow-md shadow-brand-600/20 flex items-center gap-1.5 cursor-pointer"
+                >
+                  {isSavingDevice ? 'Saving...' : 'Save Label'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* 2FA DISABLE CONFIRMATION MODAL */}
       {isDisableModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -1205,7 +1649,7 @@ export default function SettingsPage() {
                   Disable Two-Factor Authentication?
                 </h4>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  This will remove the phone verification step from login.
+                  This will remove phone passkey verification from all connected devices.
                 </p>
               </div>
             </div>
@@ -1250,7 +1694,7 @@ export default function SettingsPage() {
                 <button
                   type="submit"
                   disabled={isDisabling2FA}
-                  className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md shadow-rose-600/20 disabled:opacity-60 flex items-center gap-2"
+                  className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md shadow-rose-600/20 disabled:opacity-60 flex items-center gap-2 cursor-pointer"
                 >
                   {isDisabling2FA ? 'Disabling...' : 'Confirm & Disable 2FA'}
                 </button>

@@ -1,5 +1,13 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
+export interface ITwoFactorDevice {
+  id: string;
+  name: string;
+  deviceType: 'iphone' | 'android' | 'desktop' | 'phone';
+  addedAt: Date;
+  status: 'active' | 'revoked';
+}
+
 export interface IUserDocument extends Document {
   username: string;
   password: string;
@@ -14,6 +22,7 @@ export interface IUserDocument extends Document {
   twoFactorTempSecret?: string | null;
   twoFactorBackupCodes?: string[];
   twoFactorCreatedAt?: Date | null;
+  twoFactorDevices?: ITwoFactorDevice[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -79,6 +88,18 @@ const UserSchema: Schema = new Schema(
     twoFactorCreatedAt: {
       type: Date,
       default: null,
+    },
+    twoFactorDevices: {
+      type: [
+        {
+          id: { type: String, required: true },
+          name: { type: String, required: true },
+          deviceType: { type: String, default: 'phone' },
+          addedAt: { type: Date, default: Date.now },
+          status: { type: String, default: 'active' },
+        },
+      ],
+      default: [],
     },
   },
   { timestamps: true }
